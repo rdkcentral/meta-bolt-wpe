@@ -1,5 +1,15 @@
 <manifest>
   <remote name="rdkcentral" fetch="https://github.com/rdkcentral/"/>
+  <remote name="igalia" fetch="https://github.com/Igalia/"/>
+
+<!-- RDK7 release -->
+  <project remote="rdkcentral" name="meta-rdk" upstream="main" revision="refs/tags/1.1.2-community" path="meta-rdk"/>
+  <project remote="rdkcentral" name="meta-rdk-video" upstream="main" revision="refs/tags/1.1.2-community" path="meta-rdk-video"/>
+  <project remote="rdkcentral" name="meta-rdk-auxiliary" upstream="main" revision="refs/tags/1.2.0" path="meta-rdk-auxiliary"/>
+  <project remote="rdkcentral" name="meta-rdk-oss-reference" upstream="main" revision="refs/tags/1.2.0" path="meta-rdk-oss-reference"/>
+
+<!-- provides cog recipe -->
+  <project remote="igalia" name="meta-webkit" upstream="kirkstone" revision="8380d0488a3a28241698389e954f1ac6a035f096" path="meta-webkit"/>
 
   <project remote="rdkcentral" name="meta-bolt-distro" upstream="develop" revision="85006e76857d9e5a65a956b5d50d621cf662eae7" path="bolt"/>
 </manifest>
