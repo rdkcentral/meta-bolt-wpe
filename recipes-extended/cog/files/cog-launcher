@@ -1,0 +1,7 @@
+#!/bin/sh
+
+export WEBKIT_GST_QUIRKS=rialto
+export WEBKIT_GST_HOLE_PUNCH_QUIRK=rialto
+export WEBKIT_GST_ENABLE_AUDIO_MIXER=1
+
+/usr/bin/cog --enable-encrypted-media=1 --set-permissions=all "$@"

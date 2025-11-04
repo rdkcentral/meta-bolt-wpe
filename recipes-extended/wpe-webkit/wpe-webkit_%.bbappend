@@ -6,3 +6,5 @@ DEPENDS:remove = "virtual/vendor-gst-drm-plugins"
 
 DEPENDS += "rialto-ocdm-link"
 RDEPENDS:${PN} += "rialto-gstreamer"
+
+EXTRA_VERSIONS_PATH ??= "${TMPDIR}/versions"
