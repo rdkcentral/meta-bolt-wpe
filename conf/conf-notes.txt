@@ -1,0 +1,7 @@
+
+  bitbake wpe-bolt-image             # no multi config
+
+  bitbake mc:arm:wpe-bolt-image    \
+          mc:arm64:wpe-bolt-image  \
+          mc:amd64:wpe-bolt-image    # requires multi config
+
