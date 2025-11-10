@@ -8,3 +8,5 @@ DEPENDS += "rialto-ocdm-link"
 RDEPENDS:${PN} += "rialto-gstreamer"
 
 EXTRA_VERSIONS_PATH ??= "${TMPDIR}/versions"
+
+DISTRO_FEATURES:append = " opencdm"
