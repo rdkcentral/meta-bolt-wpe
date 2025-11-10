@@ -5,3 +5,6 @@
           mc:arm64:wpe-bolt-image  \
           mc:amd64:wpe-bolt-image    # requires multi config
 
+All images:
+  wpe-bolt-image
+  wpe-develop-bolt-image
