@@ -25,7 +25,7 @@ source setup-environment
 bitbake wpe-bolt-image
 ```
 
-## Building the Webkit application as bolt package
+## Building the WebKit as bolt package
 
 To create Bolt packages for WebKit, ensure that the base package is available in the package store. Refer to the [building the base bolt package](https://github.com/rdkcentral/meta-bolt-distro?tab=readme-ov-file#building-the-base-bolt-package) section to generate the base package and setting up the package store.
 
@@ -38,7 +38,7 @@ bolt make wpe-application
 
 ```
 
-## Running bolt packages on device
+## Running WebKit bolt packages on device
 
 To run bolt packages on device, use `bolt push` and `bolt run` as explained in [bolt tool usage](https://github.com/rdkcentral/bolt-tools/tree/main/bolt#usage)
 
