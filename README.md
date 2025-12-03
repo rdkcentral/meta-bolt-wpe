@@ -33,7 +33,7 @@ To create Bolt packages for WebKit, ensure that the base package is available in
 Follow the same steps mentioned in the [WPE OCI image building instructions](#wpe-oci-image-building-instructions) chapter to setup and build the WebKit runtime, but instead of calling `bitbake wpe-bolt-image`, use the [bolt tool](https://github.com/rdkcentral/bolt-tools/tree/main/bolt) to create bolt packages for WebKit.
 
 ```
-bolt make wpe-runtime --install
+bolt make wpe --install
 bolt make ytlr-cert-2021
 ```
 
