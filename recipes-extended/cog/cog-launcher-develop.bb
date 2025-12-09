@@ -12,4 +12,5 @@ do_install() {
   install -d ${D}${bindir}
   install -m 0555 ${WORKDIR}/cog-launcher ${D}${bindir}
   sed -i "0,/export WEBKIT_/s//export WEBKIT_INSPECTOR_HTTP_SERVER=0.0.0.0:12345\nexport WEBKIT_/" ${D}${bindir}/cog-launcher
+  sed -i 's/"\$@"/--disable-web-security=1 "\$@"/' ${D}${bindir}/cog-launcher
 }
