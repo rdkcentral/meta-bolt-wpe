@@ -1,12 +1,12 @@
 {
   "id": "com.rdkcentral.ytlr-cert-2021",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "versionName": "develop",
   "name": "ytlr-cert-2021",
   "packageType": "application",
   "entryPoint": "https://ytlr-cert.appspot.com/2021/main.html",
   "dependencies": {
-    "com.rdkcentral.wpe": "0.0.1"
+    "com.rdkcentral.wpe": "0.1.0"
   },
   "permissions": [
   ],
