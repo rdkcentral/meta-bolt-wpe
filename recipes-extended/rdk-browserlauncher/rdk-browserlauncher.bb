@@ -8,7 +8,6 @@ S = "${WORKDIR}/git/BrowserLauncher"
 PACKAGE_ARCH = "${MIDDLEWARE_ARCH}"
 SRC_URI = "${CMF_GITHUB_ROOT}/entservices-runtime.git;protocol=${CMF_GITHUB_PROTOCOL};nobranch=1;"
 SRC_URI += "file://wpe-rdk.sh"
-#SRCREV = "0d818289957fc9746a8db851f8ec2b2814ceab41"
 SRCREV = "69e29bf2476c5abb71762b8f7902b11ce8a4fb7c"
 PV .= "+${@bb.fetch2.get_srcrev(d).replace('AUTOINC+','')}"
 
@@ -26,7 +25,7 @@ EXTRA_OECMAKE:append = " -DBROWSER_LAUNCHER_VERSION=${PV}"
 
 do_install:append() {
 	install -d ${D}${bindir}
-	install -m 0555 ${WORKDIR}/wpe-rdk.sh ${D}${bindir} 
+	install -m 0555 ${WORKDIR}/wpe-rdk.sh ${D}${bindir}
 }
 
 # override install prefix

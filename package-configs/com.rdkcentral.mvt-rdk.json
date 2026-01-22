@@ -1,0 +1,19 @@
+{
+  "id": "com.rdkcentral.mvt-rdk",
+  "version": "0.1.0",
+  "versionName": "develop",
+  "name": "ytlr-cert-2021",
+  "packageType": "application",
+  "entryPoint": "--url=https://mvt.rdkcentral.com/",
+  "dependencies": {
+    "com.rdkcentral.wpe-rdk": "0.1.0"
+  },
+  "permissions": [
+    "urn:rdk:permission:internet",
+    "urn:rdk:permission:firebolt",
+    "urn:rdk:permission:thunder",
+    "urn:rdk:permission:rialto"
+  ],
+  "configuration": {
+  }
+}
