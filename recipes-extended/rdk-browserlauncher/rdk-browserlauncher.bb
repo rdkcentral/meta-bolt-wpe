@@ -1,10 +1,11 @@
 SUMMARY = "RDK Browser Launcher"
-LICENSE = "CLOSED"
-LIC_FILES_CHKSUM = "file://../LICENSE;md5=86d3f3a95c324c9479bd8986968f4327"
+LICENSE = "Apache-2.0"
+LIC_FILES_CHKSUM = "file://../LICENSE;md5=dc6e390ad71aef79d0c2caf3cde03a19"
 FILESEXTRAPATHS:prepend = "${THISDIR}/files:"
 
 S = "${WORKDIR}/git/BrowserLauncher"
 
+PACKAGE_ARCH = "${MIDDLEWARE_ARCH}"
 SRC_URI = "${CMF_GITHUB_ROOT}/entservices-runtime.git;protocol=${CMF_GITHUB_PROTOCOL};nobranch=1;"
 SRC_URI += "file://wpe-rdk.sh"
 SRCREV = "69e29bf2476c5abb71762b8f7902b11ce8a4fb7c"
@@ -29,4 +30,4 @@ do_install:append() {
 
 # override install prefix
 EXTRA_OECMAKE:append = " -DCMAKE_INSTALL_PREFIX:PATH=${libdir}/${BPN}"
-INSANE_SKIP:${PN} += "installed-vs-shipped"
+FILES:${PN} += "${libdir}/${BPN}"
