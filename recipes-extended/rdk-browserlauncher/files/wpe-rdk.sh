@@ -6,4 +6,4 @@ export WEBKIT_DEBUG="all"
 export WEBKIT_INSPECTOR_HTTP_SERVER=0.0.0.0:12345
 
 cd /usr/lib/rdk-browserlauncher/
-./BrowserLauncher $@
+./BrowserLauncher "$@"
