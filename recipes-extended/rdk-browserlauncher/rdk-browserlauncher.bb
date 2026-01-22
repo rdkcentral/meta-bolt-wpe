@@ -5,7 +5,6 @@ FILESEXTRAPATHS:prepend = "${THISDIR}/files:"
 
 S = "${WORKDIR}/git/BrowserLauncher"
 
-PACKAGE_ARCH = "${MIDDLEWARE_ARCH}"
 SRC_URI = "${CMF_GITHUB_ROOT}/entservices-runtime.git;protocol=${CMF_GITHUB_PROTOCOL};nobranch=1;"
 SRC_URI += "file://wpe-rdk.sh"
 SRCREV = "69e29bf2476c5abb71762b8f7902b11ce8a4fb7c"
