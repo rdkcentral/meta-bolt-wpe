@@ -8,7 +8,8 @@ S = "${WORKDIR}/git/BrowserLauncher"
 PACKAGE_ARCH = "${MIDDLEWARE_ARCH}"
 SRC_URI = "${CMF_GITHUB_ROOT}/entservices-runtime.git;protocol=${CMF_GITHUB_PROTOCOL};nobranch=1;"
 SRC_URI += "file://wpe-rdk.sh"
-SRCREV = "69e29bf2476c5abb71762b8f7902b11ce8a4fb7c"
+SRC_URI += "file://wpe-test.sh"
+SRCREV = "9cc26a821f90ea8964f0bc611ae8b35b24a82f15"
 PV .= "+${@bb.fetch2.get_srcrev(d).replace('AUTOINC+','')}"
 
 inherit pkgconfig cmake
@@ -23,9 +24,13 @@ RDEPENDS:${PN}:append = " shared-mime-info"
 
 EXTRA_OECMAKE:append = " -DBROWSER_LAUNCHER_VERSION=${PV}"
 
+DEPENDS += "gtest libsoup"
+EXTRA_OECMAKE:append = " -DENABLE_TESTS=ON"
+
 do_install:append() {
 	install -d ${D}${bindir}
 	install -m 0555 ${WORKDIR}/wpe-rdk.sh ${D}${bindir}
+	install -m 0555 ${WORKDIR}/wpe-test.sh ${D}${bindir}
 }
 
 # override install prefix
