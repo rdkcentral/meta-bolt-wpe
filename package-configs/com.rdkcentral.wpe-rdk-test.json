@@ -2,11 +2,11 @@
   "id": "com.rdkcentral.wpe-rdk-test",
   "version": "0.1.0",
   "versionName": "develop",
-  "name": "RDK Browser Test Suite",
+  "name": "WPE WebKit",
   "packageType": "runtime",
-  "entryPoint": "/usr/bin/wpe-test.sh",
+  "entryPoint": "<empty>",
   "dependencies": {
-    "com.rdkcentral.base": "0.1.0"
+    "com.rdkcentral.wpe-rdk": "0.1.0"
   },
   "permissions": [
   ],

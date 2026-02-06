@@ -1,14 +1,11 @@
 SUMMARY = "RDK Browser Launcher"
 LICENSE = "Apache-2.0"
 LIC_FILES_CHKSUM = "file://../LICENSE;md5=dc6e390ad71aef79d0c2caf3cde03a19"
-FILESEXTRAPATHS:prepend = "${THISDIR}/files:"
 
 S = "${WORKDIR}/git/BrowserLauncher"
 
 PACKAGE_ARCH = "${MIDDLEWARE_ARCH}"
 SRC_URI = "${CMF_GITHUB_ROOT}/entservices-runtime.git;protocol=${CMF_GITHUB_PROTOCOL};nobranch=1;"
-SRC_URI += "file://wpe-rdk.sh"
-SRC_URI += "file://wpe-test.sh"
 SRCREV = "9cc26a821f90ea8964f0bc611ae8b35b24a82f15"
 PV .= "+${@bb.fetch2.get_srcrev(d).replace('AUTOINC+','')}"
 
@@ -23,15 +20,6 @@ RDEPENDS:${PN}:append = " wpe-webkit-web-inspector-plugin"
 RDEPENDS:${PN}:append = " shared-mime-info"
 
 EXTRA_OECMAKE:append = " -DBROWSER_LAUNCHER_VERSION=${PV}"
-
-DEPENDS += "gtest libsoup"
-EXTRA_OECMAKE:append = " -DENABLE_TESTS=ON"
-
-do_install:append() {
-	install -d ${D}${bindir}
-	install -m 0555 ${WORKDIR}/wpe-rdk.sh ${D}${bindir}
-	install -m 0555 ${WORKDIR}/wpe-test.sh ${D}${bindir}
-}
 
 # override install prefix
 EXTRA_OECMAKE:append = " -DCMAKE_INSTALL_PREFIX:PATH=${libdir}/${BPN}"
