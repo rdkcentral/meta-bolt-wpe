@@ -10,13 +10,13 @@ do_install:append() {
 }
 
 FILES:${PN} = " \
-	${bindir}/wpe-rdk.sh \
 	${libdir}/${BPN}/BrowserLauncher \
 	${libdir}/${BPN}/wpewebkit/ \
 "
 
 PROVIDES += "rdk-browsertests"
 PACKAGES =+ "rdk-browsertests"
+RDEPENDS:rdk-browsertests = "rdk-browserlauncher"
 FILES:rdk-browsertests = " \
 	${bindir}/wpe-rdk.sh \
 	${libdir}/${BPN}/tests/ \
