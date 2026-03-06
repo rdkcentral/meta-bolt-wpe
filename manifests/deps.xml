@@ -11,5 +11,5 @@
 <!-- provides cog recipe -->
   <project remote="igalia" name="meta-webkit" upstream="kirkstone" revision="8380d0488a3a28241698389e954f1ac6a035f096" path="meta-webkit"/>
 
-  <project remote="rdkcentral" name="meta-bolt-distro" upstream="develop" revision="05ecf5b8da8852a2a0bbbbef275c74e5b3815064" path="bolt"/>
+  <project remote="rdkcentral" name="meta-bolt-distro" upstream="develop" revision="84010f25088420743ed3807b1d25f87086de7d1c" path="bolt"/>
 </manifest>
