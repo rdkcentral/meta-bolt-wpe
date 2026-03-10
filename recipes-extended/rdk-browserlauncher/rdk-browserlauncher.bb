@@ -5,8 +5,8 @@ LIC_FILES_CHKSUM = "file://../LICENSE;md5=dc6e390ad71aef79d0c2caf3cde03a19"
 S = "${WORKDIR}/git/BrowserLauncher"
 
 PACKAGE_ARCH = "${MIDDLEWARE_ARCH}"
-SRC_URI = "${CMF_GITHUB_ROOT}/entservices-runtime.git;protocol=${CMF_GITHUB_PROTOCOL};nobranch=1;"
-SRCREV = "4bef1f6a91ce26ff715007df861f2a11866467ed"
+SRC_URI = "${CMF_GITHUB_ROOT}/entservices-runtime.git;${CMF_GITHUB_SRC_URI_SUFFIX}"
+SRCREV = "4b372e6756352b82168226bde0c29ab5b31a9c13"
 PV .= "+${@bb.fetch2.get_srcrev(d).replace('AUTOINC+','')}"
 
 inherit pkgconfig cmake
