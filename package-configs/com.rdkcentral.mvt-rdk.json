@@ -4,7 +4,7 @@
   "versionName": "develop",
   "name": "mvt-rdk",
   "packageType": "application",
-  "entryPoint": "--url=https://mvt.rdkcentral.com/",
+  "entryPoint": "https://mvt.rdkcentral.com/",
   "dependencies": {
     "com.rdkcentral.wpe-rdk": "0.1.0"
   },
