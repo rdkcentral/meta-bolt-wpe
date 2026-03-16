@@ -1,14 +1,12 @@
 SUMMARY = "RDK Browser Launcher"
 LICENSE = "Apache-2.0"
 LIC_FILES_CHKSUM = "file://../LICENSE;md5=dc6e390ad71aef79d0c2caf3cde03a19"
-FILESEXTRAPATHS:prepend = "${THISDIR}/files:"
 
 S = "${WORKDIR}/git/BrowserLauncher"
 
 PACKAGE_ARCH = "${MIDDLEWARE_ARCH}"
-SRC_URI = "${CMF_GITHUB_ROOT}/entservices-runtime.git;protocol=${CMF_GITHUB_PROTOCOL};nobranch=1;"
-SRC_URI += "file://wpe-rdk.sh"
-SRCREV = "69e29bf2476c5abb71762b8f7902b11ce8a4fb7c"
+SRC_URI = "${CMF_GITHUB_ROOT}/entservices-runtime.git;${CMF_GITHUB_SRC_URI_SUFFIX}"
+SRCREV = "4b372e6756352b82168226bde0c29ab5b31a9c13"
 PV .= "+${@bb.fetch2.get_srcrev(d).replace('AUTOINC+','')}"
 
 inherit pkgconfig cmake
@@ -22,11 +20,6 @@ RDEPENDS:${PN}:append = " wpe-webkit-web-inspector-plugin"
 RDEPENDS:${PN}:append = " shared-mime-info"
 
 EXTRA_OECMAKE:append = " -DBROWSER_LAUNCHER_VERSION=${PV}"
-
-do_install:append() {
-	install -d ${D}${bindir}
-	install -m 0555 ${WORKDIR}/wpe-rdk.sh ${D}${bindir}
-}
 
 # override install prefix
 EXTRA_OECMAKE:append = " -DCMAKE_INSTALL_PREFIX:PATH=${libdir}/${BPN}"
