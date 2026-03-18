@@ -1,12 +1,12 @@
 {
-  "id": "com.rdkcentral.mvt-rdk",
-  "version": "0.1.0",
+  "id": "com.rdkcentral.mvt",
+  "version": "0.2.0",
   "versionName": "develop",
   "name": "mvt-rdk",
   "packageType": "application",
-  "entryPoint": "https://mvt.rdkcentral.com/",
+  "entryPoint": "--dev https://mvt.rdkcentral.com/",
   "dependencies": {
-    "com.rdkcentral.wpe-rdk": "0.1.0"
+    "com.rdkcentral.wpe": "0.2.0"
   },
   "permissions": [
     "urn:rdk:permission:internet",
