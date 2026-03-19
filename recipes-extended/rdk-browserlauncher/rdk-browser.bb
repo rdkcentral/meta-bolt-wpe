@@ -4,7 +4,7 @@ LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/Apache-2.0;md5=89aea4e17d99a7ca
 FILESEXTRAPATHS:prepend = "${THISDIR}/files:"
 SRC_URI += "file://wpe-rdk.sh"
 
-RDEPENDS:${PN} = "rdk-browserlauncher bash"
+RDEPENDS:${PN} = "rdk-browserlauncher"
 
 do_install() {
 	install -d ${D}${bindir}

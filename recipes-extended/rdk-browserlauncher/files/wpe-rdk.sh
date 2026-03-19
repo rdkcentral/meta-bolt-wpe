@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 INSECURE="--disableWebSecurity=true"
 COMWEBGL="--enableNonCompositedWebGL=true"
