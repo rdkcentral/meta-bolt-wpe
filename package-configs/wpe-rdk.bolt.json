@@ -1,6 +1,0 @@
-{
-  "config": "com.rdkcentral.wpe-rdk.json",
-  "bitbake": {
-    "image": "wpe-rdk-bolt-image"
-  }
-}
