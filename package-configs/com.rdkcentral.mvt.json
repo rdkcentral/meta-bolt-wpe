@@ -1,10 +1,10 @@
 {
-  "id": "com.rdkcentral.ytlr-cert-2021",
+  "id": "com.rdkcentral.mvt",
   "version": "0.2.0",
   "versionName": "develop",
-  "name": "ytlr-cert-2021",
+  "name": "mvt-rdk",
   "packageType": "application",
-  "entryPoint": "--dev https://ytlr-cert.appspot.com/2021/main.html",
+  "entryPoint": "--dev https://mvt.rdkcentral.com/",
   "dependencies": {
     "com.rdkcentral.wpe": "0.2.0"
   },
