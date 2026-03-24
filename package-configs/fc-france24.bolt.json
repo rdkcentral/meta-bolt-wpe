@@ -1,0 +1,6 @@
+{
+  "config": "com.france24.app.France24.json",
+  "direct": {
+    "empty": true
+  }
+}

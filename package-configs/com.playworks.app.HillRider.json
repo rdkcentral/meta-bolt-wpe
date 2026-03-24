@@ -1,0 +1,19 @@
+{
+  "id": "com.playworks.app.HillRider",
+  "version": "0.0.1",
+  "versionName": "develop",
+  "name": "Hill Rider",
+  "packageType": "application",
+  "entryPoint": "--dev https://service.play.works/service/apps/hill_rider/index.html?platform=metrological",
+  "dependencies": {
+    "com.rdkcentral.wpe": "0.2.0"
+  },
+  "permissions": [
+    "urn:rdk:permission:internet",
+    "urn:rdk:permission:firebolt",
+    "urn:rdk:permission:thunder",
+    "urn:rdk:permission:rialto"
+  ],
+  "configuration": {
+  }
+}

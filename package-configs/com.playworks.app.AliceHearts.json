@@ -1,0 +1,19 @@
+{
+  "id": "com.playworks.app.AliceHearts",
+  "version": "0.0.1",
+  "versionName": "develop",
+  "name": "Alice Hearts",
+  "packageType": "application",
+  "entryPoint": "--dev https://service.play.works/service/apps/alice_hearts/index.html?platform=metrological",
+  "dependencies": {
+    "com.rdkcentral.wpe": "0.2.0"
+  },
+  "permissions": [
+    "urn:rdk:permission:internet",
+    "urn:rdk:permission:firebolt",
+    "urn:rdk:permission:thunder",
+    "urn:rdk:permission:rialto"
+  ],
+  "configuration": {
+  }
+}

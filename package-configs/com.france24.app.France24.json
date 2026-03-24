@@ -1,0 +1,19 @@
+{
+  "id": "com.france24.app.France24",
+  "version": "0.0.1",
+  "versionName": "develop",
+  "name": "France 24",
+  "packageType": "application",
+  "entryPoint": "--dev --lightning https://france24-libertyglobal.tv.dotscreen.com/",
+  "dependencies": {
+    "com.rdkcentral.wpe": "0.2.0"
+  },
+  "permissions": [
+    "urn:rdk:permission:internet",
+    "urn:rdk:permission:firebolt",
+    "urn:rdk:permission:thunder",
+    "urn:rdk:permission:rialto"
+  ],
+  "configuration": {
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "com.dancetv.app.DanceTV",
+  "version": "0.0.1",
+  "versionName": "develop",
+  "name": "Dance TV",
+  "packageType": "application",
+  "entryPoint": "--dev --lightning https://fj3ll4wnfrvtepre.prod-apps.fireboltconnect.com/1/index.html",
+  "dependencies": {
+    "com.rdkcentral.wpe": "0.2.0"
+  },
+  "permissions": [
+    "urn:rdk:permission:internet",
+    "urn:rdk:permission:firebolt",
+    "urn:rdk:permission:thunder",
+    "urn:rdk:permission:rialto"
+  ],
+  "configuration": {
+  }
+}

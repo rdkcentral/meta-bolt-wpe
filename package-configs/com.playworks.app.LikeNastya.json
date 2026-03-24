@@ -1,0 +1,19 @@
+{
+  "id": "com.playworks.app.LikeNastya",
+  "version": "0.0.1",
+  "versionName": "develop",
+  "name": "Like Nastya",
+  "packageType": "application",
+  "entryPoint": "--dev https://service.play.works/service/apps/html5_hub/index.html?config=%2F%2Fservice.play.works%2Fvideo_portals%2Flike_nastya%2Fconfig.json&platform=metrological",
+  "dependencies": {
+    "com.rdkcentral.wpe": "0.2.0"
+  },
+  "permissions": [
+    "urn:rdk:permission:internet",
+    "urn:rdk:permission:firebolt",
+    "urn:rdk:permission:thunder",
+    "urn:rdk:permission:rialto"
+  ],
+  "configuration": {
+  }
+}
