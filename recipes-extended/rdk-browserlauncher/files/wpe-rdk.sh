@@ -2,7 +2,7 @@
 
 INSECURE="--disableWebSecurity=true"
 COMWEBGL="--enableNonCompositedWebGL=true"
-PARAMS=""
+PARAMS="--enableMediaStream=true"
 URL=""
 
 URL_REGEX='^(https?|ftp|file)://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]\.[-A-Za-z0-9\+&@/%?=~_|]*[-A-Za-z0-9\+&@#/%=~_|]$'
