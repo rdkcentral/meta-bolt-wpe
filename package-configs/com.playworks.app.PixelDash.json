@@ -1,12 +1,12 @@
 {
   "id": "com.playworks.app.PixelDash",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "versionName": "develop",
   "name": "Pixel Dash",
   "packageType": "application",
   "entryPoint": "--dev https://service.play.works/service/apps/pixel_dash/index.html?platform=metrological",
   "dependencies": {
-    "com.rdkcentral.wpe": "0.2.0"
+    "com.rdkcentral.wpe": "0.3.0"
   },
   "permissions": [
     "urn:rdk:permission:internet",
