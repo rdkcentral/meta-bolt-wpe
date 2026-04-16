@@ -2,8 +2,11 @@
 
 INSECURE="--disableWebSecurity=true"
 COMWEBGL="--enableNonCompositedWebGL=true"
-PARAMS=""
+PARAMS="--enableMediaStream=true"
 URL=""
+CONFIG_PATH="/tmp/rdk.config"
+INSPECTOR_PORT="12345"
+INSPECTOR_PORT_TRIES="16"
 
 URL_REGEX='^(https?|ftp|file)://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]\.[-A-Za-z0-9\+&@/%?=~_|]*[-A-Za-z0-9\+&@#/%=~_|]$'
 FILE_REGEX='^file://(/.*)?$'
@@ -31,10 +34,26 @@ usage() {
     echo "    -v, --verbose   - enables webkit native & webkit gstreamer logs"
 }
 
+updatePort() {
+    for port in $(seq ${INSPECTOR_PORT} $((${INSPECTOR_PORT}+${INSPECTOR_PORT_TRIES}))); do
+        if nc -z 127.0.0.1 ${port}; then
+            echo "inspector port ${port} taken!"
+        else
+            echo "inspector port set to ${port}"
+            INSPECTOR_PORT="${port}"
+            break;
+        fi
+    done
+}
+
+updateParams() {
+    PARAMS="${PARAMS/${1%=*}[^\ ]*\ /} ${1}"
+}
+
 while true; do
     case "${1}" in
         -l|--lightning)
-            PARAMS="${PARAMS} ${COMWEBGL}"
+            updateParams "${COMWEBGL}"
             shift
             ;;
         -v|--verbose)
@@ -44,8 +63,9 @@ while true; do
             shift
             ;;
         -d|--dev)
-            PARAMS="${PARAMS} ${INSECURE}"
-            export WEBKIT_INSPECTOR_HTTP_SERVER="0.0.0.0:12345"		
+            updatePort
+            updateParams "${INSECURE}"
+            export WEBKIT_INSPECTOR_HTTP_SERVER="0.0.0.0:${INSPECTOR_PORT}"
             shift
             ;;
         -h|--help)
@@ -71,7 +91,12 @@ if [[ ! "${URL}" =~ ${URL_REGEX} ]]; then
 fi
 
 if [[ "${URL}" =~ ${FILE_REGEX} ]]; then
-    PARAMS="${PARAMS} ${INSECURE}"
+    updateParams "${INSECURE}"
+fi
+
+if [ -n "${APP_CONFIG_OVERRIDES_JSON}" ]; then
+    echo "${APP_CONFIG_OVERRIDES_JSON}" > "${CONFIG_PATH}"
+    updateParams "--config=${CONFIG_PATH}"
 fi
 
 export WEBKIT_GST_QUIRKS="rialto"
