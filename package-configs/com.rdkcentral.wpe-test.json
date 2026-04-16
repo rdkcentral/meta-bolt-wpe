@@ -1,12 +1,12 @@
 {
   "id": "com.rdkcentral.wpe-test",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "versionName": "develop",
   "name": "WPE WebKit",
   "packageType": "runtime",
   "entryPoint": "<empty>",
   "dependencies": {
-    "com.rdkcentral.wpe": "0.2.0"
+    "com.rdkcentral.wpe": "0.3.0"
   },
   "permissions": [
   ],
