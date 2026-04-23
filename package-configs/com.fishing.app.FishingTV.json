@@ -1,12 +1,12 @@
 {
   "id": "com.fishing.app.FishingTV",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "versionName": "develop",
   "name": "Fishing TV",
   "packageType": "application",
   "entryPoint": "--dev --lightning https://61p71hxj5k44616b.prod-apps.fireboltconnect.com/6/index.html",
   "dependencies": {
-    "com.rdkcentral.wpe": "0.3.0"
+    "com.rdkcentral.wpe": "0.3.1"
   },
   "permissions": [
     "urn:rdk:permission:internet",
