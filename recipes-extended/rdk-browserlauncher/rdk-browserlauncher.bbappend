@@ -1,6 +1,7 @@
 FILESEXTRAPATHS:prepend = "${THISDIR}/files:"
 SRC_URI += "file://wpe-test.sh"
-SRC_URI += "file://prompt_envs_on_set.patch;patchdir=../"
+SRC_URI += "file://0001.prompt_envs_on_set.patch;patchdir=../"
+SRC_URI += "file://0002.RDKEAPPRT-724_more_versatile_options_passing_via_config_file.patch;patchdir=../"
 
 PACKAGECONFIG += "tests"
 DEPENDS += "libsoup"

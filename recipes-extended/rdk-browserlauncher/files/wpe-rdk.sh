@@ -95,7 +95,7 @@ if [[ "${URL}" =~ ${FILE_REGEX} ]]; then
 fi
 
 if [ -n "${APP_CONFIG_OVERRIDES_JSON}" ]; then
-    echo "${APP_CONFIG_OVERRIDES_JSON}" > "${CONFIG_PATH}"
+    echo "{\"configuration\":${APP_CONFIG_OVERRIDES_JSON}}" > "${CONFIG_PATH}"
     updateParams "--config=${CONFIG_PATH}"
 fi
 
