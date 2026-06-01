@@ -1,0 +1,42 @@
+From d50c86ffec2a4b9ccf40b51512ac175c2f63bcc2 Mon Sep 17 00:00:00 2001
+From: BunioFH <buniofh@gmail.com>
+Date: Wed, 27 May 2026 10:17:26 +0200
+Subject: [PATCH] disallow rialtomseaudio in webaudio
+
+---
+ Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.cpp | 4 ++++
+ Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.h   | 2 ++
+ 2 files changed, 6 insertions(+)
+
+diff --git a/Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.cpp b/Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.cpp
+index 2be8081515221..bfa8aa638429d 100644
+--- a/Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.cpp
++++ b/Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.cpp
+@@ -66,6 +66,10 @@ GStreamerQuirkRialto::GStreamerQuirkRialto()
+                 m_sinkCaps = WTFMove(templateCaps);
+         }
+     }
++
++    m_disallowedWebAudioDecoders = {
++        "rialtomseaudiosink"_s
++    };
+ }
+ 
+ bool GStreamerQuirkRialto::isPlatformSupported() const
+diff --git a/Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.h b/Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.h
+index e945d89d4dfef..9afab8ec7dcc7 100644
+--- a/Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.h
++++ b/Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.h
+@@ -41,10 +41,12 @@ class GStreamerQuirkRialto final : public GStreamerQuirk {
+     GstElement* createAudioSink() final;
+     GstElement* createWebAudioSink() final;
+     std::optional<bool> isHardwareAccelerated(GstElementFactory*) final;
++    Vector<String> disallowedWebAudioDecoders() const final { return m_disallowedWebAudioDecoders; }
+     bool shouldParseIncomingLibWebRTCBitStream() const final { return false; }
+     unsigned getAdditionalPlaybinFlags() const { return getGstPlayFlag("text") | getGstPlayFlag("native-audio") | getGstPlayFlag("native-video"); }
+ 
+ private:
++    Vector<String> m_disallowedWebAudioDecoders;
+     GRefPtr<GstCaps> m_sinkCaps;
+ };
+ 

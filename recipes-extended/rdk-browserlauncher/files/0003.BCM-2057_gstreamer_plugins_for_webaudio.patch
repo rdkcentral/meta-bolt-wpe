@@ -1,0 +1,19 @@
+From: BunioFH <buniofh@gmail.com>
+Date: Mon, 03 Jun 2026 13:07:01 +0200
+Subject: Add missing gstreamer plugins for webaudio
+Source: Comcast
+
+Adds ffmpeg gstreamer plugin to browserlauncher environment construct
+
+Index: git/BrowserLauncher/src/wpewebkit/wpewebkitconfig.cpp
+===================================================================
+--- git.orig/BrowserLauncher/src/wpewebkit/wpewebkitconfig.cpp
++++ git/BrowserLauncher/src/wpewebkit/wpewebkitconfig.cpp
+@@ -379,6 +379,7 @@ bool WpeWebKitConfig::setRialtoEnvironme
+         "libgstaudiomixer.so",
+         "libgstgio.so",
+         "libgstinterleave.so",
++        "libgstlibav.so",
+     };
+ 
+     for (const std::string &pluginFileName : plugins)
