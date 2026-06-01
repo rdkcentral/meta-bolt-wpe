@@ -1,0 +1,35 @@
+From b7b42819d9a9d9c37cc08004135102db7d03332d Mon Sep 17 00:00:00 2001
+From: Eugene Mutavchi <Ievgen_Mutavchi@comcast.com>
+Date: Mon, 29 Dec 2025 18:03:48 +0000
+Subject: [PATCH] [JSC] Do not skip the FPR path if either payload or tag GPR
+ is unavailable.
+
+---
+ .../JavaScriptCore/jit/CallFrameShuffler32_64.cpp  | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/Source/JavaScriptCore/jit/CallFrameShuffler32_64.cpp b/Source/JavaScriptCore/jit/CallFrameShuffler32_64.cpp
+index 8cc08881bb394..81a5350f3a279 100644
+--- a/Source/JavaScriptCore/jit/CallFrameShuffler32_64.cpp
++++ b/Source/JavaScriptCore/jit/CallFrameShuffler32_64.cpp
+@@ -88,13 +88,13 @@ void CallFrameShuffler::emitLoad(CachedRecovery& location)
+     bool tryFPR { true };
+     JSValueRegs wantedJSValueRegs { location.wantedJSValueRegs() };
+     if (wantedJSValueRegs) {
+-        if (wantedJSValueRegs.payloadGPR() != InvalidGPRReg
+-            && !m_registers[wantedJSValueRegs.payloadGPR()]
+-            && !m_lockedRegisters.get(wantedJSValueRegs.payloadGPR()))
+-            tryFPR = false;
+-        if (wantedJSValueRegs.tagGPR() != InvalidGPRReg
+-            && !m_registers[wantedJSValueRegs.tagGPR()]
+-            && !m_lockedRegisters.get(wantedJSValueRegs.tagGPR()))
++        const auto isAvailable = [this](GPRReg reg) {
++            return reg != InvalidGPRReg
++                && !m_registers[reg]
++                && !m_lockedRegisters.get(reg);
++        };
++        if (isAvailable(wantedJSValueRegs.payloadGPR())
++            && isAvailable(wantedJSValueRegs.tagGPR()))
+             tryFPR = false;
+     }
+ 
