@@ -2,7 +2,7 @@
 
 INSECURE="--disableWebSecurity=true"
 COMWEBGL="--enableNonCompositedWebGL=true"
-PARAMS="--enableMediaStream=true"
+PARAMS=""
 URL=""
 CONFIG_PATH="/tmp/rdk.config"
 INSPECTOR_PORT="12345"
