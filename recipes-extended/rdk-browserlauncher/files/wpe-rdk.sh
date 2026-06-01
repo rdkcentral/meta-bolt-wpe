@@ -57,9 +57,10 @@ while true; do
             shift
             ;;
         -v|--verbose)
-            export GST_DEBUG="2,webkit*:6"
+            export GST_DEBUG="2,webkit*:6,rialto*:6"
             export GST_DEBUG_NO_COLOR="1"
-            export WEBKIT_DEBUG="all"
+            export GST_DEBUG_DUMP_DOT_DIR="${HOME}"
+            export WEBKIT_DEBUG="all=debug"
             shift
             ;;
         -d|--dev)
