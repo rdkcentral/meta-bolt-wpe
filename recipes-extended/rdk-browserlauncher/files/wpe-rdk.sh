@@ -8,7 +8,7 @@ CONFIG_PATH="/tmp/rdk.config"
 INSPECTOR_PORT="12345"
 INSPECTOR_PORT_TRIES="16"
 
-URL_REGEX='^(https?|ftp|file)://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]\.[-A-Za-z0-9\+&@/%?=~_|]*[-A-Za-z0-9\+&@#/%=~_|]$'
+URL_REGEX='^(https?|ftp|file)://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]\.[-A-Za-z0-9\+&@#/%?=~_|]*[-A-Za-z0-9\+&@#/%=~_|]$'
 FILE_REGEX='^file://(/.*)?$'
 
 OPTIONS=$(getopt -o lvdh -l lightning,verbose,dev,help -n "$0" -- $@)
@@ -87,7 +87,7 @@ done
 URL="${1}"
 
 if [[ ! "${URL}" =~ ${URL_REGEX} ]]; then
-    echo "missing url or not a url!";
+    echo "missing url or not a url! ${URL}";
     exit -3
 fi
 
