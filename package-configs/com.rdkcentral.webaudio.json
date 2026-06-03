@@ -1,12 +1,12 @@
 {
   "id": "com.rdkcentral.webaudio",
-  "version": "0.3.1",
-  "versionName": "0.3.1",
+  "version": "0.3.2",
+  "versionName": "develop",
   "name": "webaudio",
   "packageType": "application",
   "entryPoint": "--dev --verbose https://tdktest.rdkcentral.com:8443/tdkservice/fileStore/lightning-apps/webaudio/WebAudioTestDynamic.html",
   "dependencies": {
-    "com.rdkcentral.wpe": "0.3.1"
+    "com.rdkcentral.wpe": "0.3.2"
   },
   "permissions": [
     "urn:rdk:permission:internet",

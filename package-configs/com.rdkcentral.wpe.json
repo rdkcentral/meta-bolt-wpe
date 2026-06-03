@@ -1,6 +1,6 @@
 {
   "id": "com.rdkcentral.wpe",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "versionName": "develop",
   "name": "WPE WebKit",
   "packageType": "runtime",
