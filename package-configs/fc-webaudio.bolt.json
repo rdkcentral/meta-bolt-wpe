@@ -1,0 +1,6 @@
+{
+  "config": "com.rdkcentral.webaudio.json",
+  "bitbake": {
+    "image": "extracodecs-bolt-image"
+  }
+}

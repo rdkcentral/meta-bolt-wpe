@@ -2,13 +2,13 @@
 
 INSECURE="--disableWebSecurity=true"
 COMWEBGL="--enableNonCompositedWebGL=true"
-PARAMS="--enableMediaStream=true"
+PARAMS=""
 URL=""
 CONFIG_PATH="/tmp/rdk.config"
 INSPECTOR_PORT="12345"
 INSPECTOR_PORT_TRIES="16"
 
-URL_REGEX='^(https?|ftp|file)://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]\.[-A-Za-z0-9\+&@/%?=~_|]*[-A-Za-z0-9\+&@#/%=~_|]$'
+URL_REGEX='^(https?|ftp|file)://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]\.[-A-Za-z0-9\+&@#/%?=~_|]*[-A-Za-z0-9\+&@#/%=~_|]$'
 FILE_REGEX='^file://(/.*)?$'
 
 OPTIONS=$(getopt -o lvdh -l lightning,verbose,dev,help -n "$0" -- $@)
@@ -57,9 +57,10 @@ while true; do
             shift
             ;;
         -v|--verbose)
-            export GST_DEBUG="2,webkit*:6"
+            export GST_DEBUG="2,webkit*:6,rialto*:6"
             export GST_DEBUG_NO_COLOR="1"
-            export WEBKIT_DEBUG="all"
+            export GST_DEBUG_DUMP_DOT_DIR="${HOME}"
+            export WEBKIT_DEBUG="all=debug"
             shift
             ;;
         -d|--dev)
@@ -86,7 +87,7 @@ done
 URL="${1}"
 
 if [[ ! "${URL}" =~ ${URL_REGEX} ]]; then
-    echo "missing url or not a url!";
+    echo "missing url or not a url! ${URL}";
     exit -3
 fi
 

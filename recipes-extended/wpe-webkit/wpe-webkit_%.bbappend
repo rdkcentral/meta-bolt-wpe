@@ -9,5 +9,7 @@ RDEPENDS:${PN} += "rialto-gstreamer"
 
 EXTRA_VERSIONS_PATH ??= "${TMPDIR}/versions"
 SRC_URI += "file://2.38.8/w3c_lifecycle.patch"
+SRC_URI += "file://2.38.8/1679.patch"
+SRC_URI += "file://2.38.8/1680.patch"
 
 DISTRO_FEATURES:append = " opencdm"
