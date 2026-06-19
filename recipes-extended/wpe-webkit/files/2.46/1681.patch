@@ -1,0 +1,44 @@
+From ea88314ac316e2a966bf80bf860f2869ca8b00f8 Mon Sep 17 00:00:00 2001
+From: BunioFH <buniofh@gmail.com>
+Date: Wed, 27 May 2026 10:17:26 +0200
+Source: Comcast
+Subject: [PATCH] disallow rialtomseaudio in webaudio
+
+---
+ Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.cpp | 4 ++++
+ Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.h   | 2 ++
+ 2 files changed, 6 insertions(+)
+
+diff --git a/Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.cpp b/Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.cpp
+index 9dea4ed41f27b..a29d7b6e53380 100644
+--- a/Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.cpp
++++ b/Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.cpp
+@@ -66,6 +66,10 @@ GStreamerQuirkRialto::GStreamerQuirkRialto()
+                 m_sinkCaps = WTFMove(templateCaps);
+         }
+     }
++
++    m_disallowedWebAudioDecoders = {
++        "rialtomseaudiosink"_s
++    };
+ }
+ 
+ bool GStreamerQuirkRialto::isPlatformSupported() const
+diff --git a/Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.h b/Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.h
+index 001694a7fe4c1..51076eab6f50f 100644
+--- a/Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.h
++++ b/Source/WebCore/platform/gstreamer/GStreamerQuirkRialto.h
+@@ -41,11 +41,13 @@ class GStreamerQuirkRialto final : public GStreamerQuirk {
+     GstElement* createAudioSink() final;
+     GstElement* createWebAudioSink() final;
+     std::optional<bool> isHardwareAccelerated(GstElementFactory*) final;
++    Vector<String> disallowedWebAudioDecoders() const final { return m_disallowedWebAudioDecoders; }
+     bool shouldParseIncomingLibWebRTCBitStream() const final { return false; }
+     unsigned getAdditionalPlaybinFlags() const { return getGstPlayFlag("text") | getGstPlayFlag("native-audio") | getGstPlayFlag("native-video"); }
+     bool needsCustomInstantRateChange() const final { return true; }
+ 
+ private:
++    Vector<String> m_disallowedWebAudioDecoders;
+     GRefPtr<GstCaps> m_sinkCaps;
+ };
+ 
