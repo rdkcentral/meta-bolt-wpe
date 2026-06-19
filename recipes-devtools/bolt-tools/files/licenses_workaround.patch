@@ -1,0 +1,21 @@
+From: BunioFH <buniofh@gmail.com>
+Date: Tue, 16 Jun 2026 20:46:01 +0200
+Subject: Temporary workaround removing special handling for common-licenses
+Source: Comcast
+
+A rollback required to allow webaudio build.
+To be removed once fix is introduced in bolt-tools.
+
+Index: git/bolt/src/make.cjs
+===================================================================
+--- git.orig/bolt/src/make.cjs
++++ git/bolt/src/make.cjs
+@@ -200,7 +200,7 @@ async function makeCommand(packageAlias,
+         packageBuilder.merge(pkg.getLayerDir());
+       }
+ 
+-      packageBuilder.merge(packageRootfsDir, ['usr/share/common-licenses'], exclude);
++      packageBuilder.merge(packageRootfsDir, [], exclude);
+       packageBuilder.finish(packageLayerArchive);
+       contentFile = packageLayerArchive;
+     }
