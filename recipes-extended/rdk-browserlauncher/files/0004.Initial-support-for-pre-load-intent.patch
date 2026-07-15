@@ -1,0 +1,710 @@
+From 5cb2de25de0599d8a4e8cba6351bf5474d680b24 Mon Sep 17 00:00:00 2001
+From: Eugene Mutavchi <Ievgen_Mutavchi@comcast.com>
+Date: Wed, 1 Jul 2026 18:07:18 +0000
+Subject: [PATCH] Initial support for 'pre-load' intent
+
+---
+ BrowserLauncher/src/browsercontroller.cpp     | 136 ++++++++++++++++--
+ BrowserLauncher/src/browsercontroller.h       |   2 +
+ BrowserLauncher/tests/browserlauncher_test.cc |  58 +++++++-
+ BrowserLauncher/tests/browserlauncher_test.h  |  12 +-
+ BrowserLauncher/tests/lifecycle_tests.cc      |  83 ++++++-----
+ .../tests/media_capabilities_tests.cc         |   8 +-
+ 7 files changed, 246 insertions(+), 55 deletions(-)
+
+Index: git/BrowserLauncher/src/browsercontroller.cpp
+===================================================================
+--- git.orig/BrowserLauncher/src/browsercontroller.cpp
++++ git/BrowserLauncher/src/browsercontroller.cpp
+@@ -18,9 +18,47 @@
+  */
+ #include "browsercontroller.h"
+ 
++#include <nlohmann/json.hpp>
++
+ #include <glib.h>
+ #include <gio/gio.h>
+ 
++using json = nlohmann::json;
++
++namespace Firebolt
++{
++
++struct Intent
++{
++    std::string action;
++    struct {
++        std::string source;
++    } context;
++};
++
++#define _SAFE_GET(j, name) ((j.is_object() && j.contains(name)) ? j.at(name) : json(nullptr))
++
++void from_json(const json& j, Intent& i)
++{
++    if (j.is_discarded())
++        return;
++    auto action = _SAFE_GET(j, "action");
++    if (!action.is_string())
++        return;
++    action.get_to(i.action);
++    if (action.empty())
++        return;
++    auto context = _SAFE_GET(j, "context");
++    auto source = _SAFE_GET(context, "source");
++    if (!source.is_string()) {
++        i.action.clear();
++        return;
++    }
++    source.get_to(i.context.source);
++}
++
++}  // namespace Firebolt
++
+ BrowserController::BrowserController(BrowserInterface *impl,
+                                      std::shared_ptr<LaunchConfigInterface> launchConfig,
+                                      std::string &&packageUrl)
+@@ -45,7 +83,8 @@ void BrowserController::launch()
+     m_browser->onClose.connect(std::bind(&BrowserController::onBrowserClose, this, std::placeholders::_1));
+ 
+     // launch the browser
+-    if (!m_browser->launch(m_launchConfig)) {
++    if (!m_browser->launch(m_launchConfig))
++    {
+         g_message("Couldn't launch browser");
+         g_application_quit(g_application_get_default());
+         return;
+@@ -64,7 +103,7 @@ void BrowserController::launch()
+         Firebolt::IFireboltAccessor::Instance().Connect(cfg, [this](const bool connected, const Firebolt::Error code) {
+             if (!connected)
+             {
+-                g_message("Firebolt disconnected, code = %d", code);
++                g_message("Firebolt disconnected, code = %d", static_cast<int32_t>(code));
+                 return;
+             }
+             if (!m_connectJob.joinable())
+@@ -103,6 +142,31 @@ void BrowserController::onFireboltConnec
+ {
+     using namespace Firebolt;
+ 
++    // get launch intent
++    {
++        auto &actions = Firebolt::IFireboltAccessor::Instance().ActionsInterface();
++        Result<SubscriptionId> result = actions.subscribeOnIntent([this](const std::string& intent){
++            m_mainRunLoop->InvokeTask([this, intent = std::string{intent}]() {
++                onIntent(intent);
++            });
++        });
++        if (!result)
++        {
++            g_warning("actions.subscribeOnIntent failed, error code = %d", static_cast<int32_t>(result.error()));
++        }
++        Result<std::string> intent = actions.intent();
++        if (!intent)
++        {
++            g_warning("actions.intent failed, error code = %d", static_cast<int32_t>(intent.error()));
++        }
++        else
++        {
++            m_mainRunLoop->InvokeTask([this, intent = std::string{intent.value()}]() {
++                onIntent(intent);
++            });
++        }
++    }
++
+     // subscribe to lifecycle state change events
+     {
+         auto &presentation = Firebolt::IFireboltAccessor::Instance().PresentationInterface();
+@@ -113,7 +177,7 @@ void BrowserController::onFireboltConnec
+         });
+         if (!result)
+         {
+-            g_warning("presentation.subscribeOnFocusedChanged failed, error code = %d", result.error());
++            g_warning("presentation.subscribeOnFocusedChanged failed, error code = %d", static_cast<int32_t>(result.error()));
+         }
+         auto &lifecycle = Firebolt::IFireboltAccessor::Instance().LifecycleInterface();
+         result = lifecycle.subscribeOnStateChanged([this](const std::vector<Lifecycle::StateChange>& changes) {
+@@ -123,7 +187,7 @@ void BrowserController::onFireboltConnec
+         });
+         if (!result)
+         {
+-            g_warning("lifecycle.subscribeOnStateChanged failed, error code = %d", result.error());
++            g_warning("lifecycle.subscribeOnStateChanged failed, error code = %d", static_cast<int32_t>(result.error()));
+         }
+     }
+ 
+@@ -137,12 +201,12 @@ void BrowserController::onFireboltConnec
+         });
+         if (!result)
+         {
+-            g_warning("device.subscribeOnHdrChanged failed, error code = %d", result.error());
++            g_warning("device.subscribeOnHdrChanged failed, error code = %d", static_cast<int32_t>(result.error()));
+         }
+         Result<Device::HDRFormat> hdrFormat = device.hdr();
+         if (!hdrFormat)
+         {
+-            g_warning("device.hdr failed, error code = %d", hdrFormat.error());
++            g_warning("device.hdr failed, error code = %d", static_cast<int32_t>(hdrFormat.error()));
+         }
+         else
+         {
+@@ -167,7 +231,7 @@ void BrowserController::onBrowserClose(C
+             auto result = lifecycle.close(Firebolt::Lifecycle::CloseType::DEACTIVATE);
+             if (!result)
+             {
+-                g_critical("Lifecycle.close(deactivate) failed, error: %d", result.error());
++                g_critical("Lifecycle.close(deactivate) failed, error: %d", static_cast<int32_t>(result.error()));
+                 break;
+             }
+             return;  // keep the browser running
+@@ -189,13 +253,28 @@ void BrowserController::onLifecycleState
+ {
+     g_assert(g_main_context_is_owner (g_main_context_default()));
+ 
+-    auto toPageSate = [](Firebolt::Lifecycle::LifecycleState state, bool focused) {
++    auto toPageSate = [](Firebolt::Lifecycle::LifecycleState state, Firebolt::Lifecycle::LifecycleState oldState, bool isPreloading, bool focused) {
+         switch(state)
+         {
+             case Firebolt::Lifecycle::LifecycleState::ACTIVE:
++                if (isPreloading)
++                {
++                    g_warning("lifecycle state changed to 'ACTIVE' with pre-load intent.");
++                }
+                 return focused ? PageLifecycleState::ACTIVE : PageLifecycleState::PASSIVE;
+             case Firebolt::Lifecycle::LifecycleState::PAUSED:
+-                return PageLifecycleState::HIDDEN;
++                switch(oldState)
++                {
++                    case Firebolt::Lifecycle::LifecycleState::SUSPENDED:
++                    case Firebolt::Lifecycle::LifecycleState::INITIALIZING:
++                        if (!isPreloading)
++                        {
++                            return PageLifecycleState::PASSIVE;
++                        }
++                        [[fallthrough]];
++                    default:
++                        return PageLifecycleState::HIDDEN;
++                }
+             case Firebolt::Lifecycle::LifecycleState::SUSPENDED:
+             case Firebolt::Lifecycle::LifecycleState::HIBERNATED:
+                 return PageLifecycleState::FROZEN;
+@@ -215,7 +294,7 @@ void BrowserController::onLifecycleState
+                   static_cast<unsigned>(change.newState),
+                   static_cast<unsigned>(change.oldState));
+         m_lifecycleState = change.newState;
+-        m_browser->setState(toPageSate(change.newState, m_isFocused));
++        m_browser->setState(toPageSate(change.newState, change.oldState, m_isPreloading, m_isFocused));
+     }
+ }
+ 
+@@ -246,3 +325,52 @@ void BrowserController::onHdrFormatChang
+ 
+     m_browser->setScreenSupportsHDR(supportsHdr);
+ }
++
++void BrowserController::onIntent(const std::string& intentStr)
++{
++    g_assert(g_main_context_is_owner (g_main_context_default()));
++
++    g_message("intent = %s", intentStr.c_str());
++
++    m_isPreloading = false;
++
++    // Try parsing 'pre-load' intent as defined in
++    // https://wiki.rdkcentral.com/spaces/WG/pages/433962733/RDK8+Firebolt%C2%AE+Intents+Specification#RDK8Firebolt%C2%AEIntentsSpecification-Pre-loadactiontype
++    const auto intentJson = json::parse(intentStr, nullptr, false, true);
++
++    if (!intentJson.is_discarded() && intentJson.is_object())
++    {
++        const json& payload = intentJson.contains("intent") ? intentJson.at("intent") : intentJson;
++        if (payload.is_object())
++        {
++            const auto intent = payload.get<Firebolt::Intent>();
++            if (!intent.action.empty())
++            {
++                static constexpr char kPreloadAction[] = "pre-load";
++                g_message("intent action = %s, source = %s", intent.action.c_str(), intent.context.source.c_str());
++                m_isPreloading = (g_ascii_strcasecmp(intent.action.c_str(), kPreloadAction) == 0);
++            }
++            else
++            {
++                g_warning("failed to parse intent, no action given");
++            }
++        }
++        else
++        {
++            g_warning("failed to parse intent, not an object");
++        }
++    }
++    else
++    {
++        g_warning("failed to parse intent");
++    }
++
++    if (!m_isPreloading)
++    {
++        if (m_lifecycleState == Firebolt::Lifecycle::LifecycleState::PAUSED)
++        {
++            g_message("setting page lifecycle state to 'PASSIVE' on intent change");
++            m_browser->setState(PageLifecycleState::PASSIVE);
++        }
++    }
++}
+Index: git/BrowserLauncher/src/browsercontroller.h
+===================================================================
+--- git.orig/BrowserLauncher/src/browsercontroller.h
++++ git/BrowserLauncher/src/browsercontroller.h
+@@ -45,12 +45,14 @@ private:
+     void onLifecycleStateChanged(std::vector<Firebolt::Lifecycle::StateChange>);
+     void onFocusedChanged(bool);
+     void onHdrFormatChanged(Firebolt::Device::HDRFormat hdr_format);
++    void onIntent(const std::string& intent);
+ 
+     BrowserInterface * const m_browser;
+     std::shared_ptr<LaunchConfigInterface> m_launchConfig;
+     std::string m_packageUrl;
+ 
+     bool m_isFocused { false };
++    bool m_isPreloading { false };
+     Firebolt::Lifecycle::LifecycleState m_lifecycleState { Firebolt::Lifecycle::LifecycleState::INITIALIZING };
+     std::unique_ptr<RunLoop> m_mainRunLoop;
+     std::jthread m_connectJob;
+Index: git/BrowserLauncher/tests/browserlauncher_test.cc
+===================================================================
+--- git.orig/BrowserLauncher/tests/browserlauncher_test.cc
++++ git/BrowserLauncher/tests/browserlauncher_test.cc
+@@ -71,6 +71,18 @@ std::string toString(LifecycleState stat
+     return "unknown";
+ }
+ 
++json intentJson(IntentType intent_type, const int32_t intentId = 0)
++{
++    switch(intent_type)
++    {
++        case IntentType::PRELOAD:
++            return {{"intent",{{"action","pre-load"},{"context",{{"source","system"}}}}},{"intentId",intentId}};
++        case IntentType::EMPTY:
++        default:
++            return {{"intent",""},{"intentId",intentId}};
++    }
++}
++
+ }  // namespace
+ 
+ std::ostream& operator<<(std::ostream& out, const LifecycleState& state) {
+@@ -276,12 +288,32 @@ void BrowserLauncherTest::onMessage(Soup
+     }
+ }
+ 
+-void BrowserLauncherTest::changeLifecycleStateState(LifecycleState oldState, LifecycleState newState, bool focused)
++void BrowserLauncherTest::changeIntent(const IntentType intent)
++{
++    if (_intent != intent)
++    {
++        _intent = intent;
++        _intent_id++;
++        json message = {
++            {"jsonrpc", "2.0"},
++            {"method", "Actions.onIntent"},
++            {"params", intentJson(_intent, _intent_id)}
++        };
++        sendFireboltMessage(message);
++    }
++}
++
++void BrowserLauncherTest::changeLifecycleStateState(LifecycleState oldState, LifecycleState newState, bool focused, bool preloading)
+ {
+     std::string oldStateStr = toString(oldState);
+     std::string newStateStr = toString(newState);
+ 
+-    g_message("changeLifecycleStateState: oldState=%s, newState=%s, focused=%c", oldStateStr.c_str(), newStateStr.c_str(), focused ? 'y' : 'n');
++    g_message("changeLifecycleStateState: oldState=%s, newState=%s, focused=%c, preloading=%c", oldStateStr.c_str(), newStateStr.c_str(), focused ? 'y' : 'n', preloading ? 'y' : 'n');
++
++    if (isPreloading() != preloading)
++    {
++        changeIntent(preloading ? IntentType::PRELOAD : IntentType::EMPTY);
++    }
+ 
+     if (_current_lc_state != newState)
+     {
+@@ -395,6 +427,28 @@ void BrowserLauncherTest::onFireboltMess
+         };
+         sendFireboltMessage(result);
+     }
++    else if (method == "Actions.onIntent")
++    {
++        auto params = message["params"];
++        EXPECT_FALSE(params.is_discarded());
++        EXPECT_TRUE(params.contains("listen"));
++        bool listen = params["listen"].get<bool>();
++        json result = {
++            {"jsonrpc", "2.0"},
++            {"id", id},
++            {"result", {{"listening",listen},{"event",method}}}
++        };
++        sendFireboltMessage(result);
++    }
++    else if (method == "Actions.intent")
++    {
++        json result = {
++            {"jsonrpc", "2.0"},
++            {"id", id},
++            {"result", intentJson(_intent, _intent_id)}
++        };
++        sendFireboltMessage(result);
++    }
+     else
+     {
+         json result = {
+Index: git/BrowserLauncher/tests/browserlauncher_test.h
+===================================================================
+--- git.orig/BrowserLauncher/tests/browserlauncher_test.h
++++ git/BrowserLauncher/tests/browserlauncher_test.h
+@@ -55,6 +55,12 @@ enum class LifecycleState
+     TERMINATING  = 0x5
+ };
+ 
++enum class IntentType
++{
++    EMPTY,
++    PRELOAD
++};
++
+ std::ostream& operator<<(std::ostream& out, const LifecycleState&);
+ 
+ class BrowserLauncherTest : public ::testing::Test
+@@ -93,6 +99,8 @@ protected:
+     LifecycleState _current_lc_state { LifecycleState::INITIALIZING };
+     std::string _close_type { };
+     bool _focused { false };
++    IntentType _intent { IntentType::PRELOAD };
++    int32_t _intent_id { 0 };
+ 
+     WstCompositor* _compositor { nullptr };
+     EssCtx *_ess_ctx { nullptr };
+@@ -116,7 +124,9 @@ protected:
+     virtual void onTestMessage(const json& message) { }
+     virtual void onConnectionClosed(SoupWebsocketConnection *connection);
+ 
+-    void changeLifecycleStateState(LifecycleState oldState, LifecycleState newState, bool focused = false);
++    bool isPreloading() const { return _intent == IntentType::PRELOAD; }
++    void changeIntent(const IntentType intent);
++    void changeLifecycleStateState(LifecycleState oldState, LifecycleState newState, bool focused, bool preloading);
+     void sendFireboltMessage(const json& message) { sendMessage(_firebolt_connection, message); }
+     void sendTestMessage(const json& message) { sendMessage(_test_connection, message); }
+     void launchBrowser(const std::string& url, std::vector<std::string> args = { });
+Index: git/BrowserLauncher/tests/lifecycle_tests.cc
+===================================================================
+--- git.orig/BrowserLauncher/tests/lifecycle_tests.cc
++++ git/BrowserLauncher/tests/lifecycle_tests.cc
+@@ -25,7 +25,7 @@
+ namespace {
+ 
+ // Convert Firebolt Lifecycle 2.0 state string to W3C Page Lifecycle string
+-static std::string toPageLifecycleState(LifecycleState fireboltState, bool focused)
++static std::string toPageLifecycleState(LifecycleState fireboltState, bool focused, bool preloading)
+ {
+     if (focused)
+     {
+@@ -39,7 +39,7 @@ static std::string toPageLifecycleState(
+     }
+     else if (fireboltState == LifecycleState::PAUSED)
+     {
+-        return "hidden";
++        return preloading ? "hidden" : "passive";
+     }
+     else if (fireboltState == LifecycleState::SUSPENDED || fireboltState == LifecycleState::HIBERNATED)
+     {
+@@ -160,11 +160,12 @@ TEST_P(LifecycleStateTest, SunnyDay)
+         // NB: browser starts in 'hidden' state, we need to adjust firebolt state
+         // to keep the test in sync with browser
+         bool focused = false;
++        bool preloading = true;
+         const auto oldState = LifecycleState::INITIALIZING;
+         const auto newState = LifecycleState::PAUSED;
+-        const std::string pageState = toPageLifecycleState(newState, focused);
++        const std::string pageState = toPageLifecycleState(newState, focused, preloading);
+ 
+-        changeLifecycleStateState(oldState, newState, focused);
++        changeLifecycleStateState(oldState, newState, focused, preloading);
+ 
+         bool timed_out = !runUntil([this, pageState] {
+             return _test_connection != nullptr && _page_state == pageState;
+@@ -198,11 +199,12 @@ TEST_P(LifecycleStateTest, SunnyDay)
+         const auto oldState = std::get<0>(transition);
+         const auto newState = std::get<1>(transition);
+         const bool focused = std::get<2>(transition);
+-        const std::string pageState = toPageLifecycleState(newState, focused);
++        const bool preloading = false;
++        const std::string pageState = toPageLifecycleState(newState, focused, preloading);
+ 
+         EXPECT_EQ (_current_lc_state, oldState);
+ 
+-        changeLifecycleStateState(oldState, newState, focused);
++        changeLifecycleStateState(oldState, newState, focused, preloading);
+ 
+         bool timed_out = !runUntil([this, pageState] {
+             g_message("page state: %s, target: %s", _page_state.c_str(), pageState.c_str());
+@@ -236,11 +238,12 @@ TEST_P(LifecycleStateTest, LaunchToActiv
+     // change firebolt lifecycle state and wait for web page to connect and report intial state
+     {
+         bool focused = true;
++        bool preloading = false;
+         const auto oldState = LifecycleState::INITIALIZING;
+         const auto newState = LifecycleState::ACTIVE;
+-        const std::string pageState = toPageLifecycleState(newState, focused);
++        const std::string pageState = toPageLifecycleState(newState, focused, preloading);
+ 
+-        changeLifecycleStateState(oldState, newState, focused);
++        changeLifecycleStateState(oldState, newState, focused, preloading);
+ 
+         bool timed_out = !runUntil([this, pageState] {
+             return _test_connection != nullptr && _page_state == pageState;
+@@ -251,7 +254,7 @@ TEST_P(LifecycleStateTest, LaunchToActiv
+     }
+ 
+     // attempt to shutdown browser gracefully
+-    changeLifecycleStateState(_current_lc_state, LifecycleState::TERMINATING);
++    changeLifecycleStateState(_current_lc_state, LifecycleState::TERMINATING, true, false);
+     {
+         runUntil([this] {
+             return _page_state == "terminated" && !_close_type.empty();
+@@ -282,12 +285,13 @@ TEST_P(LifecycleStateTest, ResumeToActiv
+ 
+     // first move browser to frozen state
+     bool focused = false;
++    bool preloading = true;
+     auto oldState = LifecycleState::INITIALIZING;
+     for (const auto newState : {LifecycleState::PAUSED, LifecycleState::SUSPENDED} )
+     {
+-        const std::string pageState = toPageLifecycleState(newState, focused);
++        const std::string pageState = toPageLifecycleState(newState, focused, preloading);
+ 
+-        changeLifecycleStateState(oldState, newState, focused);
++        changeLifecycleStateState(oldState, newState, focused, preloading);
+ 
+         bool timed_out = !runUntil([this, pageState] {
+             return _test_connection != nullptr && _page_state == pageState;
+@@ -302,10 +306,11 @@ TEST_P(LifecycleStateTest, ResumeToActiv
+     // next resume to active
+     {
+         focused = true;
++        preloading = false;
+         const auto newState = LifecycleState::ACTIVE;
+-        const std::string pageState = toPageLifecycleState(newState, focused);
++        const std::string pageState = toPageLifecycleState(newState, focused, preloading);
+ 
+-        changeLifecycleStateState(oldState, newState, focused);
++        changeLifecycleStateState(oldState, newState, focused, preloading);
+ 
+         bool timed_out = !runUntil([this, pageState] {
+             return _test_connection != nullptr && _page_state == pageState;
+@@ -316,7 +321,7 @@ TEST_P(LifecycleStateTest, ResumeToActiv
+     }
+ 
+     // attempt to shutdown browser gracefully
+-    changeLifecycleStateState(_current_lc_state, LifecycleState::TERMINATING);
++    changeLifecycleStateState(_current_lc_state, LifecycleState::TERMINATING, focused, preloading);
+     {
+         runUntil([this] {
+             return _page_state == "terminated" && !_close_type.empty();
+@@ -349,13 +354,14 @@ TEST_P(LifecycleStateTest, FirstFrameOnL
+     EXPECT_EQ(_state_change_listeners.size(), 1);
+ 
+     bool focused = false;
++    bool preloading = true;
+     auto oldState = LifecycleState::INITIALIZING;
+     auto newState = LifecycleState::PAUSED;
+ 
+     // expected at least one frame rendered in hidden state
+     {
+-        const std::string pageState = toPageLifecycleState(newState, focused);
+-        changeLifecycleStateState(oldState, newState, focused);
++        const std::string pageState = toPageLifecycleState(newState, focused, preloading);
++        changeLifecycleStateState(oldState, newState, focused, preloading);
+         bool timed_out = !runUntil([this, pageState] {
+             return _test_connection != nullptr && _page_state == pageState && _first_frame_ts != -1;
+         }, 3s);
+@@ -369,7 +375,7 @@ TEST_P(LifecycleStateTest, FirstFrameOnL
+     }
+ 
+     // attempt to shutdown browser gracefully
+-    changeLifecycleStateState(_current_lc_state, LifecycleState::TERMINATING);
++    changeLifecycleStateState(_current_lc_state, LifecycleState::TERMINATING, focused, preloading);
+     {
+         runUntil([this] {
+             return _page_state == "terminated" && !_close_type.empty();
+@@ -403,13 +409,14 @@ TEST_P(LifecycleStateTest, FirstFrameOnR
+     EXPECT_EQ(_state_change_listeners.size(), 1);
+ 
+     bool focused = false;
++    bool preloading = false;
+     auto oldState = LifecycleState::INITIALIZING;
+ 
+     // expected at least one frame rendered
+     for (const auto newState : {LifecycleState::PAUSED, LifecycleState::ACTIVE} )
+     {
+-        const std::string pageState = toPageLifecycleState(newState, focused);
+-        changeLifecycleStateState(oldState, newState, focused);
++        const std::string pageState = toPageLifecycleState(newState, focused, preloading);
++        changeLifecycleStateState(oldState, newState, focused, preloading);
+         bool timed_out = !runUntil([this, pageState] {
+             return _test_connection != nullptr && _page_state == pageState && _first_frame_ts != -1;
+         }, 3s);
+@@ -426,8 +433,8 @@ TEST_P(LifecycleStateTest, FirstFrameOnR
+         // TODO: reset first frame rendered flag
+         const auto newState = LifecycleState::SUSPENDED;
+ 
+-        const std::string pageState = toPageLifecycleState(newState, focused);
+-        changeLifecycleStateState(oldState, newState, focused);
++        const std::string pageState = toPageLifecycleState(newState, focused, preloading);
++        changeLifecycleStateState(oldState, newState, focused, preloading);
+         bool timed_out = !runUntil([this, pageState] {
+             return _test_connection != nullptr && _page_state == pageState;
+         }, 1s);
+@@ -443,14 +450,15 @@ TEST_P(LifecycleStateTest, FirstFrameOnR
+         return false;
+     }, 500ms, 500ms);
+ 
+-
+     // back to hidden, expected at least one frame rendered
++    preloading = true;
++
+     {
+         const auto newState = LifecycleState::PAUSED;
+ 
+         auto prevFrameCount = _frame_count;
+-        const std::string pageState = toPageLifecycleState(newState, focused);
+-        changeLifecycleStateState(oldState, newState, focused);
++        const std::string pageState = toPageLifecycleState(newState, focused, preloading);
++        changeLifecycleStateState(oldState, newState, focused, preloading);
+         bool timed_out = !runUntil([this, pageState, prevFrameCount] {
+             return _test_connection != nullptr && _page_state == pageState && prevFrameCount != _frame_count;
+         }, 1s);
+@@ -464,7 +472,7 @@ TEST_P(LifecycleStateTest, FirstFrameOnR
+     }
+ 
+     // attempt to shutdown browser gracefully
+-    changeLifecycleStateState(_current_lc_state, LifecycleState::TERMINATING);
++    changeLifecycleStateState(_current_lc_state, LifecycleState::TERMINATING, focused, preloading);
+     {
+         runUntil([this] {
+             return _page_state == "terminated" && !_close_type.empty();
+@@ -498,13 +506,14 @@ TEST_P(LifecycleStateTest, FirstFrameWhi
+     EXPECT_EQ(_state_change_listeners.size(), 1);
+ 
+     bool focused = false;
++    bool preloading = true;
+     auto oldState = LifecycleState::INITIALIZING;
+ 
+     // expected least one frame rendered in hidden state
+     {
+         const auto newState = LifecycleState::PAUSED;
+-        const std::string pageState = toPageLifecycleState(newState, focused);
+-        changeLifecycleStateState(oldState, newState, focused);
++        const std::string pageState = toPageLifecycleState(newState, focused, preloading);
++        changeLifecycleStateState(oldState, newState, focused, preloading);
+         bool timed_out = !runUntil([this, pageState] {
+             return _test_connection != nullptr && _page_state == pageState && _first_frame_ts != -1;
+         }, 3s);
+@@ -526,8 +535,8 @@ TEST_P(LifecycleStateTest, FirstFrameWhi
+         // TODO: reset first frame rendered flag
+         const auto newState = LifecycleState::SUSPENDED;
+ 
+-        const std::string pageState = toPageLifecycleState(newState, focused);
+-        changeLifecycleStateState(oldState, newState, focused);
++        const std::string pageState = toPageLifecycleState(newState, focused, preloading);
++        changeLifecycleStateState(oldState, newState, focused, preloading);
+         bool timed_out = !runUntil([this, pageState] {
+             return _test_connection != nullptr && _page_state == pageState;
+         }, 1s);
+@@ -548,8 +557,8 @@ TEST_P(LifecycleStateTest, FirstFrameWhi
+         const auto newState = LifecycleState::PAUSED;
+ 
+         auto prevFrameCount = _frame_count;
+-        const std::string pageState = toPageLifecycleState(newState, focused);
+-        changeLifecycleStateState(oldState, newState, focused);
++        const std::string pageState = toPageLifecycleState(newState, focused, preloading);
++        changeLifecycleStateState(oldState, newState, focused, preloading);
+         bool timed_out = !runUntil([this, pageState, prevFrameCount] {
+             return _test_connection != nullptr && _page_state == pageState && prevFrameCount != _frame_count;
+         }, 1s);
+@@ -563,7 +572,7 @@ TEST_P(LifecycleStateTest, FirstFrameWhi
+     }
+ 
+     // attempt to shutdown browser gracefully
+-    changeLifecycleStateState(_current_lc_state, LifecycleState::TERMINATING);
++    changeLifecycleStateState(_current_lc_state, LifecycleState::TERMINATING, focused, preloading);
+     {
+         runUntil([this] {
+             return _page_state == "terminated" && !_close_type.empty();
+@@ -594,11 +603,12 @@ TEST_P(LifecycleStateTest, WindowClose)
+     // change firebolt lifecycle state and wait for web page to connect and report intial state
+     {
+         bool focused = true;
++        bool preloading = false;
+         const auto oldState = LifecycleState::INITIALIZING;
+         const auto newState = LifecycleState::ACTIVE;
+-        const std::string pageState = toPageLifecycleState(newState, focused);
++        const std::string pageState = toPageLifecycleState(newState, focused, preloading);
+ 
+-        changeLifecycleStateState(oldState, newState, focused);
++        changeLifecycleStateState(oldState, newState, focused, preloading);
+ 
+         bool timed_out = !runUntil([this, pageState] {
+             return _test_connection != nullptr && _page_state == pageState;
+@@ -638,11 +648,12 @@ TEST_P(LifecycleStateTest, WindowMinimiz
+     // change firebolt lifecycle state and wait for web page to connect and report intial state
+     {
+         bool focused = true;
++        bool preloading = false;
+         const auto oldState = LifecycleState::INITIALIZING;
+         const auto newState = LifecycleState::ACTIVE;
+-        const std::string pageState = toPageLifecycleState(newState, focused);
++        const std::string pageState = toPageLifecycleState(newState, focused, preloading);
+ 
+-        changeLifecycleStateState(oldState, newState, focused);
++        changeLifecycleStateState(oldState, newState, focused, preloading);
+ 
+         bool timed_out = !runUntil([this, pageState] {
+             return _test_connection != nullptr && _page_state == pageState;
+Index: git/BrowserLauncher/tests/media_capabilities_tests.cc
+===================================================================
+--- git.orig/BrowserLauncher/tests/media_capabilities_tests.cc
++++ git/BrowserLauncher/tests/media_capabilities_tests.cc
+@@ -154,7 +154,7 @@ TEST_P(HdrSupportTest, InitialHdrSetting
+     if (HasFatalFailure())
+         return;
+ 
+-    changeLifecycleStateState(LifecycleState::INITIALIZING, LifecycleState::ACTIVE, true);
++    changeLifecycleStateState(LifecycleState::INITIALIZING, LifecycleState::ACTIVE, true, false);
+ 
+     unsigned id = _req_id++;
+     json req = {
+@@ -200,7 +200,7 @@ TEST_P(HdrSupportTest, HdrSettingChange)
+         EXPECT_FALSE(timed_out) << "timed out waiting for browser launcher";
+     }
+ 
+-    changeLifecycleStateState(LifecycleState::INITIALIZING, LifecycleState::ACTIVE, true);
++    changeLifecycleStateState(LifecycleState::INITIALIZING, LifecycleState::ACTIVE, true, false);
+ 
+     for (int i = 0; i < 2; ++i)
+     {
+@@ -280,7 +280,7 @@ TEST_P(DecodingInfoTest, CodecSupport)
+     if (HasFatalFailure())
+         return;
+ 
+-    changeLifecycleStateState(LifecycleState::INITIALIZING, LifecycleState::ACTIVE, true);
++    changeLifecycleStateState(LifecycleState::INITIALIZING, LifecycleState::ACTIVE, true, false);
+ 
+     unsigned id = _req_id++;
+     json req = {
+@@ -384,7 +384,7 @@ std::vector<DecodingInfoTestConfig> GetD
+             ._type = "media-source",
+             ._audio = {
+                 {
+-                    ._content_type = "audio/mp4;codecs=\"mp4a.40.1\"",
++                    ._content_type = "audio/mp4;codecs=\"mp4a.40.2\"",
+                     ._channels = "2"
+                 }
+             }
