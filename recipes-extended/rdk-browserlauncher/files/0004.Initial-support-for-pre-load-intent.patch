@@ -197,7 +197,7 @@ Index: git/BrowserLauncher/src/browsercontroller.cpp
      }
  }
  
-@@ -246,3 +325,44 @@ void BrowserController::onHdrFormatChang
+@@ -246,3 +325,52 @@ void BrowserController::onHdrFormatChang
  
      m_browser->setScreenSupportsHDR(supportsHdr);
  }
@@ -214,18 +214,26 @@ Index: git/BrowserLauncher/src/browsercontroller.cpp
 +    // https://wiki.rdkcentral.com/spaces/WG/pages/433962733/RDK8+Firebolt%C2%AE+Intents+Specification#RDK8Firebolt%C2%AEIntentsSpecification-Pre-loadactiontype
 +    const auto intentJson = json::parse(intentStr, nullptr, false, true);
 +
-+    if (intentJson.is_object())
++    if (!intentJson.is_discarded() && intentJson.is_object())
 +    {
-+        const auto intent = intentJson.get<Firebolt::Intent>();
-+        if (!intent.action.empty())
++        const json& payload = intentJson.contains("intent") ? intentJson.at("intent") : intentJson;
++        if (payload.is_object())
 +        {
-+            static constexpr char kPreloadAction[] = "pre-load";
-+            g_message("intent action = %s, source = %s", intent.action.c_str(), intent.context.source.c_str());
-+            m_isPreloading = (g_ascii_strcasecmp(intent.action.c_str(), kPreloadAction) == 0);
++            const auto intent = payload.get<Firebolt::Intent>();
++            if (!intent.action.empty())
++            {
++                static constexpr char kPreloadAction[] = "pre-load";
++                g_message("intent action = %s, source = %s", intent.action.c_str(), intent.context.source.c_str());
++                m_isPreloading = (g_ascii_strcasecmp(intent.action.c_str(), kPreloadAction) == 0);
++            }
++            else
++            {
++                g_warning("failed to parse intent, no action given");
++            }
 +        }
 +        else
 +        {
-+            g_warning("failed to parse intent, invalid contents");
++            g_warning("failed to parse intent, not an object");
 +        }
 +    }
 +    else
