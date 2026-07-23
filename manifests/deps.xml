@@ -4,12 +4,12 @@
 
 <!-- 2026Q1 release -->
   <project remote="rdkcentral" name="meta-rdk" upstream="develop" revision="refs/tags/1.19.0" path="meta-rdk"/>
-  <project remote="rdkcentral" name="meta-rdk-video" upstream="develop" revision="refs/tags/1.19.0" path="meta-rdk-video"/>
+  <project remote="rdkcentral" name="meta-rdk-video" upstream="develop" revision="686b5890491de86e8fb25e75b3dc19b3899a8ee0" path="meta-rdk-video"/>
   <project remote="rdkcentral" name="meta-rdk-auxiliary" upstream="main" revision="refs/tags/1.9.2" path="meta-rdk-auxiliary"/>
   <project remote="rdkcentral" name="meta-rdk-oss-reference" upstream="main" revision="refs/tags/4.13.0" path="meta-rdk-oss-reference"/>
 
 <!-- provides cog recipe -->
   <project remote="igalia" name="meta-webkit" upstream="kirkstone" revision="8380d0488a3a28241698389e954f1ac6a035f096" path="meta-webkit"/>
 
-  <project remote="rdkcentral" name="meta-bolt-distro" upstream="main" revision="7512421f21e6e8f0aee4374c1be8fef3723f7135" path="bolt"/>
+  <project remote="rdkcentral" name="meta-bolt-distro" upstream="main" revision="refs/tags/0.3.1" path="bolt"/>
 </manifest>
