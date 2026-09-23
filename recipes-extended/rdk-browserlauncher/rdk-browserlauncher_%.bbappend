@@ -5,7 +5,7 @@ SRC_URI += "file://0002.RDKEAPPRT-724_more_versatile_options_passing_via_config_
 SRC_URI += "file://0003.BCM-2057_gstreamer_plugins_for_webaudio.patch;patchdir=../"
 
 
-# entservices runtime tag 1.2.7
+# entservices-runtime 1.2.7 tag
 SRCREV = "e057af11fffba885b2de96142f0c3bc76c2e3aad"
 
 PACKAGECONFIG += "tests"
