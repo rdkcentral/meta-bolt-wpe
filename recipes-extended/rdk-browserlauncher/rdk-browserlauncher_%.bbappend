@@ -3,16 +3,17 @@ SRC_URI += "file://wpe-test.sh"
 SRC_URI += "file://0001.prompt_envs_on_set.patch;patchdir=../"
 SRC_URI += "file://0002.RDKEAPPRT-724_more_versatile_options_passing_via_config_file.patch;patchdir=../"
 SRC_URI += "file://0003.BCM-2057_gstreamer_plugins_for_webaudio.patch;patchdir=../"
-SRC_URI += "file://0004.Initial-support-for-pre-load-intent.patch;patchdir=../"
 
-# entservices-runtime 1.2.6 tag
-SRCREV = "c53ecb3c1996135b69c7f2f4ebed671a9f6e4128"
+
+# entservices-runtime 1.2.7 tag
+SRCREV = "e057af11fffba885b2de96142f0c3bc76c2e3aad"
 
 PACKAGECONFIG += "tests"
 
 RDEPENDS:${PN}:append = " wpe-webkit xkeyboard-config"
 RDEPENDS:${PN}:append = " wpe-webkit-web-inspector-plugin"
 RDEPENDS:${PN}:append = " shared-mime-info"
+RDEPENDS:${PN}:append = " firebolt-web"
 
 RDEPENDS:${PN}:append = " gstreamer1.0-plugins-base-app"
 RDEPENDS:${PN}:append = " gstreamer1.0-plugins-base-audioconvert"
