@@ -12,8 +12,8 @@ PR = "r0"
 
 # TODO: Update to tag when available
 # SRC_URI = "git://github.com/rdkcentral/firebolt-js-client.git;protocol=https;tag=${PV}"
-SRC_URI = "git://github.com/rdkcentral/firebolt-js-client.git;protocol=https;branch=feature/wpeextn"
-SRCREV = "3abbb2ef0319e60fbcefc3b3b50be3365b7e5b51"
+SRC_URI = "git://github.com/rdkcentral/firebolt-js-client.git;protocol=https;branch=feat/preconfigured_extn_path"
+SRCREV = "c58510dd57ae8ef15f29eb74f6e0fec4d5f64721"
 
 S = "${WORKDIR}/git"
 
