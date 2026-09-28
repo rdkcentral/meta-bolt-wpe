@@ -3,13 +3,13 @@
   <remote name="igalia" fetch="https://github.com/Igalia/"/>
 
 <!-- 2026Q1 release -->
-  <project remote="rdkcentral" name="meta-rdk" upstream="develop" revision="refs/tags/1.19.0" path="meta-rdk"/>
-  <project remote="rdkcentral" name="meta-rdk-video" upstream="develop" revision="686b5890491de86e8fb25e75b3dc19b3899a8ee0" path="meta-rdk-video"/>
-  <project remote="rdkcentral" name="meta-rdk-auxiliary" upstream="main" revision="refs/tags/1.9.2" path="meta-rdk-auxiliary"/>
-  <project remote="rdkcentral" name="meta-rdk-oss-reference" upstream="main" revision="refs/tags/4.13.0" path="meta-rdk-oss-reference"/>
+  <project remote="rdkcentral" name="meta-rdk" upstream="develop" revision="4c2e4ba0e19a5a474ea892959d015def2b0aa86b" path="meta-rdk"/>
+  <project remote="rdkcentral" name="meta-rdk-video" upstream="develop" revision="ee64638c5f205fb6849b47a6bc397894a55e28d8" path="meta-rdk-video"/>
+  <project remote="rdkcentral" name="meta-rdk-auxiliary" upstream="main" revision="refs/tags/1.11.1" path="meta-rdk-auxiliary"/>
+  <project remote="rdkcentral" name="meta-rdk-oss-reference" upstream="main" revision="refs/tags/4.14.0" path="meta-rdk-oss-reference"/>
 
 <!-- provides cog recipe -->
   <project remote="igalia" name="meta-webkit" upstream="kirkstone" revision="8380d0488a3a28241698389e954f1ac6a035f096" path="meta-webkit"/>
 
-  <project remote="rdkcentral" name="meta-bolt-distro" upstream="main" revision="refs/tags/0.3.1" path="bolt"/>
+  <project remote="rdkcentral" name="meta-bolt-distro" upstream="main" revision="refs/tags/0.4.0" path="bolt"/>
 </manifest>

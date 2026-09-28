@@ -16,7 +16,7 @@ Index: git/BrowserLauncher/src/browsercontroller.cpp
 ===================================================================
 --- git.orig/BrowserLauncher/src/browsercontroller.cpp
 +++ git/BrowserLauncher/src/browsercontroller.cpp
-@@ -18,9 +18,47 @@
+@@ -18,6 +18,8 @@
   */
  #include "browsercontroller.h"
  
@@ -25,46 +25,7 @@ Index: git/BrowserLauncher/src/browsercontroller.cpp
  #include <glib.h>
  #include <gio/gio.h>
  
-+using json = nlohmann::json;
-+
-+namespace Firebolt
-+{
-+
-+struct Intent
-+{
-+    std::string action;
-+    struct {
-+        std::string source;
-+    } context;
-+};
-+
-+#define _SAFE_GET(j, name) ((j.is_object() && j.contains(name)) ? j.at(name) : json(nullptr))
-+
-+void from_json(const json& j, Intent& i)
-+{
-+    if (j.is_discarded())
-+        return;
-+    auto action = _SAFE_GET(j, "action");
-+    if (!action.is_string())
-+        return;
-+    action.get_to(i.action);
-+    if (action.empty())
-+        return;
-+    auto context = _SAFE_GET(j, "context");
-+    auto source = _SAFE_GET(context, "source");
-+    if (!source.is_string()) {
-+        i.action.clear();
-+        return;
-+    }
-+    source.get_to(i.context.source);
-+}
-+
-+}  // namespace Firebolt
-+
- BrowserController::BrowserController(BrowserInterface *impl,
-                                      std::shared_ptr<LaunchConfigInterface> launchConfig,
-                                      std::string &&packageUrl)
-@@ -45,7 +83,8 @@ void BrowserController::launch()
+@@ -45,7 +47,8 @@ void BrowserController::launch()
      m_browser->onClose.connect(std::bind(&BrowserController::onBrowserClose, this, std::placeholders::_1));
  
      // launch the browser
@@ -74,7 +35,7 @@ Index: git/BrowserLauncher/src/browsercontroller.cpp
          g_message("Couldn't launch browser");
          g_application_quit(g_application_get_default());
          return;
-@@ -64,7 +103,7 @@ void BrowserController::launch()
+@@ -64,7 +67,7 @@ void BrowserController::launch()
          Firebolt::IFireboltAccessor::Instance().Connect(cfg, [this](const bool connected, const Firebolt::Error code) {
              if (!connected)
              {
@@ -83,15 +44,15 @@ Index: git/BrowserLauncher/src/browsercontroller.cpp
                  return;
              }
              if (!m_connectJob.joinable())
-@@ -103,6 +142,31 @@ void BrowserController::onFireboltConnec
+@@ -103,6 +106,31 @@ void BrowserController::onFireboltConnec
  {
      using namespace Firebolt;
  
 +    // get launch intent
 +    {
 +        auto &actions = Firebolt::IFireboltAccessor::Instance().ActionsInterface();
-+        Result<SubscriptionId> result = actions.subscribeOnIntent([this](const std::string& intent){
-+            m_mainRunLoop->InvokeTask([this, intent = std::string{intent}]() {
++        Result<SubscriptionId> result = actions.subscribeOnIntent([this](const Firebolt::Actions::Intent& intent){
++            m_mainRunLoop->InvokeTask([this, intent = Firebolt::Actions::Intent{intent}]() {
 +                onIntent(intent);
 +            });
 +        });
@@ -99,14 +60,14 @@ Index: git/BrowserLauncher/src/browsercontroller.cpp
 +        {
 +            g_warning("actions.subscribeOnIntent failed, error code = %d", static_cast<int32_t>(result.error()));
 +        }
-+        Result<std::string> intent = actions.intent();
++        Result<Firebolt::Actions::Intent> intent = actions.intent();
 +        if (!intent)
 +        {
 +            g_warning("actions.intent failed, error code = %d", static_cast<int32_t>(intent.error()));
 +        }
 +        else
 +        {
-+            m_mainRunLoop->InvokeTask([this, intent = std::string{intent.value()}]() {
++            m_mainRunLoop->InvokeTask([this, intent = Firebolt::Actions::Intent{intent.value()}]() {
 +                onIntent(intent);
 +            });
 +        }
@@ -115,7 +76,7 @@ Index: git/BrowserLauncher/src/browsercontroller.cpp
      // subscribe to lifecycle state change events
      {
          auto &presentation = Firebolt::IFireboltAccessor::Instance().PresentationInterface();
-@@ -113,7 +177,7 @@ void BrowserController::onFireboltConnec
+@@ -113,7 +141,7 @@ void BrowserController::onFireboltConnec
          });
          if (!result)
          {
@@ -124,7 +85,7 @@ Index: git/BrowserLauncher/src/browsercontroller.cpp
          }
          auto &lifecycle = Firebolt::IFireboltAccessor::Instance().LifecycleInterface();
          result = lifecycle.subscribeOnStateChanged([this](const std::vector<Lifecycle::StateChange>& changes) {
-@@ -123,7 +187,7 @@ void BrowserController::onFireboltConnec
+@@ -123,7 +151,7 @@ void BrowserController::onFireboltConnec
          });
          if (!result)
          {
@@ -133,7 +94,7 @@ Index: git/BrowserLauncher/src/browsercontroller.cpp
          }
      }
  
-@@ -137,12 +201,12 @@ void BrowserController::onFireboltConnec
+@@ -137,12 +165,12 @@ void BrowserController::onFireboltConnec
          });
          if (!result)
          {
@@ -148,7 +109,7 @@ Index: git/BrowserLauncher/src/browsercontroller.cpp
          }
          else
          {
-@@ -167,7 +231,7 @@ void BrowserController::onBrowserClose(C
+@@ -167,7 +195,7 @@ void BrowserController::onBrowserClose(C
              auto result = lifecycle.close(Firebolt::Lifecycle::CloseType::DEACTIVATE);
              if (!result)
              {
@@ -157,7 +118,7 @@ Index: git/BrowserLauncher/src/browsercontroller.cpp
                  break;
              }
              return;  // keep the browser running
-@@ -189,13 +253,28 @@ void BrowserController::onLifecycleState
+@@ -189,13 +217,28 @@ void BrowserController::onLifecycleState
  {
      g_assert(g_main_context_is_owner (g_main_context_default()));
  
@@ -188,7 +149,7 @@ Index: git/BrowserLauncher/src/browsercontroller.cpp
              case Firebolt::Lifecycle::LifecycleState::SUSPENDED:
              case Firebolt::Lifecycle::LifecycleState::HIBERNATED:
                  return PageLifecycleState::FROZEN;
-@@ -215,7 +294,7 @@ void BrowserController::onLifecycleState
+@@ -215,7 +258,7 @@ void BrowserController::onLifecycleState
                    static_cast<unsigned>(change.newState),
                    static_cast<unsigned>(change.oldState));
          m_lifecycleState = change.newState;
@@ -197,49 +158,21 @@ Index: git/BrowserLauncher/src/browsercontroller.cpp
      }
  }
  
-@@ -246,3 +325,52 @@ void BrowserController::onHdrFormatChang
+@@ -246,3 +289,24 @@ void BrowserController::onHdrFormatChang
  
      m_browser->setScreenSupportsHDR(supportsHdr);
  }
 +
-+void BrowserController::onIntent(const std::string& intentStr)
++void BrowserController::onIntent(const Firebolt::Actions::Intent& intent)
 +{
 +    g_assert(g_main_context_is_owner (g_main_context_default()));
 +
-+    g_message("intent = %s", intentStr.c_str());
-+
 +    m_isPreloading = false;
 +
-+    // Try parsing 'pre-load' intent as defined in
-+    // https://wiki.rdkcentral.com/spaces/WG/pages/433962733/RDK8+Firebolt%C2%AE+Intents+Specification#RDK8Firebolt%C2%AEIntentsSpecification-Pre-loadactiontype
-+    const auto intentJson = json::parse(intentStr, nullptr, false, true);
-+
-+    if (!intentJson.is_discarded() && intentJson.is_object())
-+    {
-+        const json& payload = intentJson.contains("intent") ? intentJson.at("intent") : intentJson;
-+        if (payload.is_object())
-+        {
-+            const auto intent = payload.get<Firebolt::Intent>();
-+            if (!intent.action.empty())
-+            {
-+                static constexpr char kPreloadAction[] = "pre-load";
-+                g_message("intent action = %s, source = %s", intent.action.c_str(), intent.context.source.c_str());
-+                m_isPreloading = (g_ascii_strcasecmp(intent.action.c_str(), kPreloadAction) == 0);
-+            }
-+            else
-+            {
-+                g_warning("failed to parse intent, no action given");
-+            }
-+        }
-+        else
-+        {
-+            g_warning("failed to parse intent, not an object");
-+        }
-+    }
-+    else
-+    {
-+        g_warning("failed to parse intent");
-+    }
++    static constexpr char kPreloadAction[] = "pre-load";
++    const Firebolt::Actions::IntentData& intentData = intent.intent;
++    g_message("intent action = %s, source = %s", intentData.action.c_str(), intentData.context.value_or(Firebolt::Actions::IntentContext()).source.value_or(std::string("<nil>")).c_str());
++    m_isPreloading = (g_ascii_strcasecmp(intentData.action.c_str(), kPreloadAction) == 0);
 +
 +    if (!m_isPreloading)
 +    {
@@ -258,7 +191,7 @@ Index: git/BrowserLauncher/src/browsercontroller.h
      void onLifecycleStateChanged(std::vector<Firebolt::Lifecycle::StateChange>);
      void onFocusedChanged(bool);
      void onHdrFormatChanged(Firebolt::Device::HDRFormat hdr_format);
-+    void onIntent(const std::string& intent);
++    void onIntent(const Firebolt::Actions::Intent& intent);
  
      BrowserInterface * const m_browser;
      std::shared_ptr<LaunchConfigInterface> m_launchConfig;

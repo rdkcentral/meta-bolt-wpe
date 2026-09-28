@@ -1,5 +1,15 @@
 #!/bin/sh
 
+NAME="wpe"
+if [ -n "${APP_PACKAGE_VERSION}" ]; then
+    NAME="${APP_PACKAGE_VERSION}"
+fi
+LINE="$(printf '%*s' "${#NAME}" '' | tr ' ' '=')"
+
+echo "===${LINE}==="
+echo "== ${NAME} =="
+echo "===${LINE}==="
+
 INSECURE="--disableWebSecurity=true"
 COMWEBGL="--enableNonCompositedWebGL=true"
 PARAMS=""
@@ -7,9 +17,6 @@ URL=""
 CONFIG_PATH="/tmp/rdk.config"
 INSPECTOR_PORT="12345"
 INSPECTOR_PORT_TRIES="16"
-
-URL_REGEX='^(https?|ftp|file)://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]\.[-A-Za-z0-9\+&@#/%?=~_|]*[-A-Za-z0-9\+&@#/%=~_|]$'
-FILE_REGEX='^file://(/.*)?$'
 
 OPTIONS=$(getopt -o lvdh -l lightning,verbose,dev,help -n "$0" -- $@)
 
@@ -36,7 +43,7 @@ usage() {
 
 updatePort() {
     for port in $(seq ${INSPECTOR_PORT} $((${INSPECTOR_PORT}+${INSPECTOR_PORT_TRIES}))); do
-        if nc -z 127.0.0.1 ${port}; then
+        if netcat -z 127.0.0.1 ${port}; then
             echo "inspector port ${port} taken!"
         else
             echo "inspector port set to ${port}"
@@ -86,12 +93,11 @@ done
 
 URL="${1}"
 
-if [[ ! "${URL}" =~ ${URL_REGEX} ]]; then
-    echo "missing url or not a url! ${URL}";
+if ! testuri "${URL}"; then
     exit -3
 fi
 
-if [[ "${URL}" =~ ${FILE_REGEX} ]]; then
+if [ "$(echo ${URL} | cut -c -7)" = "file://" ]; then
     updateParams "${INSECURE}"
 fi
 
