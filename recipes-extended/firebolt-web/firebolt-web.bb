@@ -11,6 +11,7 @@ PV = "1.0.0"
 PR = "r0"
 
 SRC_URI = "git://github.com/rdkcentral/firebolt-js-client.git;protocol=https;tag=${PV}"
+SRCREV = "7fe029fbd543d4b029504b5a231ae2406f92bb0d"
 
 S = "${WORKDIR}/git"
 
