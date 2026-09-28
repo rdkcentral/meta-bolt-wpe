@@ -7,13 +7,10 @@ inherit cmake
 
 PACKAGE_ARCH = "${MIDDLEWARE_ARCH}"
 
-PV = "0.1.0"
+PV = "1.0.0"
 PR = "r0"
 
-# TODO: Update to tag when available
-# SRC_URI = "git://github.com/rdkcentral/firebolt-js-client.git;protocol=https;tag=${PV}"
-SRC_URI = "git://github.com/rdkcentral/firebolt-js-client.git;protocol=https;branch=feat/preconfigured_extn_path"
-SRCREV = "c58510dd57ae8ef15f29eb74f6e0fec4d5f64721"
+SRC_URI = "git://github.com/rdkcentral/firebolt-js-client.git;protocol=https;tag=${PV}"
 
 S = "${WORKDIR}/git"
 
