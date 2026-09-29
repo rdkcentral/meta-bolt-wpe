@@ -1,8 +1,12 @@
+---
+ BrowserLauncher/src/wpewebkit/wpewebkitconfig.cpp |    6 ++++++
+ 1 file changed, 6 insertions(+)
+
 Index: git/BrowserLauncher/src/wpewebkit/wpewebkitconfig.cpp
 ===================================================================
 --- git.orig/BrowserLauncher/src/wpewebkit/wpewebkitconfig.cpp
 +++ git/BrowserLauncher/src/wpewebkit/wpewebkitconfig.cpp
-@@ -61,6 +61,12 @@ unsigned long readLimits(const std::stri
+@@ -63,6 +63,12 @@ unsigned long readLimits(const std::stri
  void setEnvVar(const char *varName, const std::string& value, bool replace)
  {
      // FIXME: setenv/putenv are not thread safe and may cause random crashes.

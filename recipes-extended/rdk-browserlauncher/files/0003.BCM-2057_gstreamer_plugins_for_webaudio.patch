@@ -5,11 +5,15 @@ Source: Comcast
 
 Adds ffmpeg gstreamer plugin to browserlauncher environment construct
 
+---
+ BrowserLauncher/src/wpewebkit/wpewebkitconfig.cpp |    1 +
+ 1 file changed, 1 insertion(+)
+
 Index: git/BrowserLauncher/src/wpewebkit/wpewebkitconfig.cpp
 ===================================================================
 --- git.orig/BrowserLauncher/src/wpewebkit/wpewebkitconfig.cpp
 +++ git/BrowserLauncher/src/wpewebkit/wpewebkitconfig.cpp
-@@ -379,6 +379,7 @@ bool WpeWebKitConfig::setRialtoEnvironme
+@@ -411,6 +411,7 @@ bool WpeWebKitConfig::setRialtoEnvironme
          "libgstaudiomixer.so",
          "libgstgio.so",
          "libgstinterleave.so",
