@@ -13,6 +13,7 @@ PACKAGECONFIG += "tests"
 RDEPENDS:${PN}:append = " wpe-webkit xkeyboard-config"
 RDEPENDS:${PN}:append = " wpe-webkit-web-inspector-plugin"
 RDEPENDS:${PN}:append = " shared-mime-info"
+RDEPENDS:${PN}:append = " firebolt-web"
 
 RDEPENDS:${PN}:append = " gstreamer1.0-plugins-base-app"
 RDEPENDS:${PN}:append = " gstreamer1.0-plugins-base-audioconvert"
