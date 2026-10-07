@@ -49,3 +49,5 @@ FILES:rdk-browsertests = " \
 	${bindir}/wpe-rdk.sh \
 	${libexecdir}/${BPN}/tests/ \
 "
+
+CXXFLAGS:append = " -DDEFAULT_LOCAL_FILE_DIR='\"/\"'"

@@ -15,6 +15,7 @@ COMWEBGL="--enableNonCompositedWebGL=true"
 PARAMS=""
 URL=""
 CONFIG_PATH="/tmp/rdk.config"
+PACKAGE_DIR="/"
 INSPECTOR_PORT="12345"
 INSPECTOR_PORT_TRIES="16"
 
@@ -92,6 +93,23 @@ while true; do
 done
 
 URL="${1}"
+
+case "${URL}" in
+    *://*)
+        ;;
+    /*)
+        [ -d "${URL}" ] && URL="${URL%/}/index.html"
+        URL="file://${URL}"
+        ;;
+    ""|.|./)
+        URL="file://${PACKAGE_DIR}index.html"
+        ;;
+    *)
+        URL="${PACKAGE_DIR}${URL}"
+        [ -d "${URL}" ] && URL="${URL%/}/index.html"
+        URL="file://${URL}"
+        ;;
+esac
 
 if ! testuri "${URL}"; then
     exit -3
