@@ -93,10 +93,6 @@ done
 
 URL="${1}"
 
-if ! testuri "${URL}"; then
-    exit -3
-fi
-
 if [ "$(echo ${URL} | cut -c -7)" = "file://" ]; then
     updateParams "${INSECURE}"
 fi

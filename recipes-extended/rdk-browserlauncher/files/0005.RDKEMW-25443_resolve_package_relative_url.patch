@@ -1,0 +1,94 @@
+Index: git/BrowserLauncher/src/launchconfig.h
+===================================================================
+--- git.orig/BrowserLauncher/src/launchconfig.h
++++ git/BrowserLauncher/src/launchconfig.h
+@@ -18,6 +18,7 @@
+  */
+ #pragma once
+ 
++#include <filesystem>
+ #include <memory>
+ 
+ #include "launchconfiginterface.h"
+@@ -31,6 +32,14 @@
+ #endif
+ #define DEFAULT_CONFIG_FILE_PATH  DEFAULT_LOCAL_FILE_DIR "/rdk.config"
+ 
++inline std::filesystem::path resolveLocalFilePath(const std::string& value)
++{
++    std::filesystem::path path { value };
++    if (!path.is_absolute())
++        path = std::filesystem::path { DEFAULT_LOCAL_FILE_DIR } / path;
++    return path.lexically_normal();
++}
++
+ class LaunchConfig final : public LaunchConfigInterface
+ {
+ private:
+Index: git/BrowserLauncher/src/launchconfig.cpp
+===================================================================
+--- git.orig/BrowserLauncher/src/launchconfig.cpp
++++ git/BrowserLauncher/src/launchconfig.cpp
+@@ -140,11 +140,7 @@
+         }
+         else if constexpr (std::is_same_v<T, LocalFilePath>)
+         {
+-            fs::path fullPath = ([&val](){
+-                return val.starts_with( DEFAULT_LOCAL_FILE_DIR )
+-                    ? fs::path { val }
+-                    : fs::path { DEFAULT_LOCAL_FILE_DIR } /  val;
+-            })();
++            fs::path fullPath = resolveLocalFilePath(val);
+             std::error_code ec;
+             if (fs::exists(fullPath, ec))
+                 return LocalFilePath(fullPath);
+Index: git/BrowserLauncher/src/main.cpp
+===================================================================
+--- git.orig/BrowserLauncher/src/main.cpp
++++ git/BrowserLauncher/src/main.cpp
+@@ -29,6 +29,8 @@
+ 
+ #include <csignal>
+ #include <array>
++#include <filesystem>
++#include <system_error>
+ 
+ struct GFreeDeleter
+ {
+@@ -180,6 +182,23 @@
+     return group;
+ }
+ 
++static gchar* resolvePackageUrl(const gchar* value)
++{
++    gchar_ptr scheme { g_uri_parse_scheme(value) };
++    if (scheme)
++        return g_strdup(value);
++
++    std::filesystem::path path = resolveLocalFilePath(value);
++
++    std::error_code ec;
++    if (std::filesystem::is_directory(path, ec))
++        path /= "index.html";
++
++    gchar *resolved = g_strconcat("file://", path.c_str(), nullptr);
++    g_message("resolved package uri '%s' to '%s'", value, resolved);
++    return resolved;
++}
++
+ int main(int argc, char *argv[])
+ {
+     GError *error = nullptr;
+@@ -207,6 +226,12 @@
+         g_option_context_free (context);
+         if (!url)
+             url = g_strdup("file://" DEFAULT_LOCAL_FILE_DIR "/index.html");
++        else
++        {
++            gchar *resolved = resolvePackageUrl(url);
++            g_free(url);
++            url = resolved;
++        }
+         if (!configPath)
+             configPath = g_strdup(DEFAULT_LOCAL_FILE_DIR "/rdk.config");
+     }

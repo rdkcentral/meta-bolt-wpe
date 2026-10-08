@@ -4,6 +4,7 @@ SRC_URI += "file://0001.prompt_envs_on_set.patch;patchdir=../"
 SRC_URI += "file://0002.RDKEAPPRT-724_more_versatile_options_passing_via_config_file.patch;patchdir=../"
 SRC_URI += "file://0003.BCM-2057_gstreamer_plugins_for_webaudio.patch;patchdir=../"
 SRC_URI += "file://0004.Initial-support-for-pre-load-intent.patch;patchdir=../"
+SRC_URI += "file://0005.RDKEMW-25443_resolve_package_relative_url.patch;patchdir=../"
 
 # entservices-runtime 1.2.6 tag
 SRCREV = "c53ecb3c1996135b69c7f2f4ebed671a9f6e4128"
@@ -49,3 +50,5 @@ FILES:rdk-browsertests = " \
 	${bindir}/wpe-rdk.sh \
 	${libexecdir}/${BPN}/tests/ \
 "
+
+CXXFLAGS:append = " -DDEFAULT_LOCAL_FILE_DIR='\"/\"'"
