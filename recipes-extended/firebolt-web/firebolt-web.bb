@@ -11,7 +11,7 @@ PR = "r0"
 
 SRC_URI = "${CMF_GITHUB_ROOT}/firebolt-js-client;${CMF_GITHUB_SRC_URI_SUFFIX}"
 
-# Release version - 1.0.0
+# Release version - 1.0.1
 PV = "1.0.1"
 SRCREV = "23e5c7e737f3e5d00e3730951decdc07f4e07ae3"
 
