@@ -1,0 +1,17 @@
+{
+  "id": "com.rdkcentral.fireboltwebcert",
+  "version": "0.1.0",
+  "versionName": "develop",
+  "name": "FireboltWebCert",
+  "packageType": "application",
+  "entryPoint": "--dev https://rdkcentral.github.io/firebolt-js-client/firebolt-cert-app.html",
+  "dependencies": {
+    "com.rdkcentral.wpe": ">=0.5.0"
+  },
+  "permissions": [
+    "urn:rdk:permission:internet",
+    "urn:rdk:permission:firebolt"
+  ],
+  "configuration": {
+  }
+}
