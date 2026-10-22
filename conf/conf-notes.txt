@@ -7,4 +7,3 @@
 
 All images:
   wpe-bolt-image
-  wpe-develop-bolt-image
