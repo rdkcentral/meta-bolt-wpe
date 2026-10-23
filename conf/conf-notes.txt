@@ -1,9 +1,9 @@
 
-  bitbake wpe-bolt-image             # no multi config
+  bitbake wpe-rdk-bolt-image             # no multi config
 
-  bitbake mc:arm:wpe-bolt-image    \
-          mc:arm64:wpe-bolt-image  \
-          mc:amd64:wpe-bolt-image    # requires multi config
+  bitbake mc:arm:wpe-rdk-bolt-image    \
+          mc:arm64:wpe-rdk-bolt-image  \
+          mc:amd64:wpe-rdk-bolt-image    # requires multi config
 
 All images:
-  wpe-bolt-image
+  wpe-rdk-bolt-image
