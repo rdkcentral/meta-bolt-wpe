@@ -4,7 +4,7 @@ SRC_URI += "file://0001.prompt_envs_on_set.patch;patchdir=../"
 
 # entservices-runtime develop, PR 77 (RDKEMW-27353). Not a tag: it carries the
 # config resilience that patch 0002 used to provide, which 1.2.8 predates.
-SRCREV = "fc82818e255412d5c75ecbe51b7b0b0d8ff45c00"
+SRCREV = "10067dd6d0dd2fc526644b7bc7c7ddc5bbf30345"
 
 PACKAGECONFIG += "tests"
 
