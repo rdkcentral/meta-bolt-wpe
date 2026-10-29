@@ -1,12 +1,10 @@
 FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 SRC_URI += "file://wpe-test.sh"
 SRC_URI += "file://0001.prompt_envs_on_set.patch;patchdir=../"
-SRC_URI += "file://0002.RDKEAPPRT-724_more_versatile_options_passing_via_config_file.patch;patchdir=../"
-SRC_URI += "file://0003.BCM-2057_gstreamer_plugins_for_webaudio.patch;patchdir=../"
-SRC_URI += "file://0004.RDKEAPPRT-1554_firebolt_cpp_client_0.7.0_update.patch;patchdir=../"
 
-# entservices-runtime 1.2.7 tag
-SRCREV = "e057af11fffba885b2de96142f0c3bc76c2e3aad"
+# entservices-runtime develop, PR 77 (RDKEMW-27353). Not a tag: it carries the
+# config resilience that patch 0002 used to provide, which 1.2.8 predates.
+SRCREV = "fc82818e255412d5c75ecbe51b7b0b0d8ff45c00"
 
 PACKAGECONFIG += "tests"
 
