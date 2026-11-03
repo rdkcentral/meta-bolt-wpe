@@ -1,0 +1,7 @@
+{
+  "config": "com.rdkcentral.test-webgl3d.json",
+  "direct": {
+    "script": "../tests/make.sh",
+    "archive": "../tests/rootfs-webgl3d.tgz"
+  }
+}
