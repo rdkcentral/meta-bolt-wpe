@@ -18,7 +18,7 @@
     "urn:rdk:config:overrides": {
       "application": {
         "options": {
-          "webAudio": true
+          "enableWebAudio": true
         }
       }
     }

@@ -14,7 +14,6 @@ INSECURE="--disableWebSecurity=true"
 COMWEBGL="--enableNonCompositedWebGL=true"
 PARAMS=""
 URL=""
-CONFIG_PATH="/tmp/rdk.config"
 INSPECTOR_PORT="12345"
 INSPECTOR_PORT_TRIES="16"
 
@@ -99,11 +98,6 @@ fi
 
 if [ "$(echo ${URL} | cut -c -7)" = "file://" ]; then
     updateParams "${INSECURE}"
-fi
-
-if [ -n "${APP_CONFIG_OVERRIDES_JSON}" ]; then
-    echo "{\"configuration\":${APP_CONFIG_OVERRIDES_JSON}}" > "${CONFIG_PATH}"
-    updateParams "--config=${CONFIG_PATH}"
 fi
 
 export WEBKIT_GST_QUIRKS="rialto"
