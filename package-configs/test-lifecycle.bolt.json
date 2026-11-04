@@ -1,0 +1,7 @@
+{
+  "config": "com.rdkcentral.test-lifecycle.json",
+  "direct": {
+    "script": "../tests/make.sh",
+    "archive": "../tests/rootfs-lifecycle.tgz"
+  }
+}

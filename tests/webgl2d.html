@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Animated Canvas2D Example</title>
+  <style>
+    body {
+      font-family:    Arial, sans-serif;
+      padding:        20px;
+      background:     white;
+    }
+    #log {
+      margin-top:     20px;
+      border:         1px solid #ccc;
+      padding:        10px;
+      height:         300px;
+      overflow-y:     auto;
+      background:     #f3f3f3;
+    }
+    h1 {
+      vertical-align: middle;
+    }
+    .state-entry {
+      margin-bottom:  5px;
+      font-size:      14px;
+    }
+    #signal {
+      border-radius:  15px;
+      border:         1px solid black;
+      background:     lightgreen;
+      width:          30px;
+      height:         30px;
+      display:        inline-block;
+    }
+    #gls {
+      display:        inline-block;
+    }
+    #signal.on {
+      background:     green;
+    }
+    #signal.off {
+      background:     red;
+    }
+    #flags {
+      float:          right;
+    }
+    #flags div {
+      /* display:        inline-block; */
+      margin:         0 10px;
+      font-variant:   small-caps;
+      font-size:      .5em;
+    }
+    canvas { 
+      border:         1px solid #fff;
+    }
+  </style>
+</head>
+<body>
+  <h1>Page Lifecycle State Logger, Canvas2D <div id="signal">&nbsp;</div> <div id="flags"></div></h1>
+  <canvas id="canvas" width="300" height="300"></canvas>
+
+  <div id="log"></div>
+
+  <div>&nbsp;</div>
+  <div>Canvas2D: <div id="gls">&nbsp;</div></div>
+
+  <script>
+    const logContainer = document.getElementById('log');
+    const signal = document.getElementById('signal');
+    const flags = document.getElementById('flags');
+    const gls = document.getElementById('gls');
+    const canvas = document.getElementById("canvas");
+    let options = {
+      cleanup: true,
+      events: true
+    };
+
+    const getState = () => {
+      if (document.visibilityState === 'hidden') {
+        return 'hidden';
+      }
+      if (document.hasFocus()) {
+        return 'active';
+        }
+        return 'passive';
+    };
+
+    let state = getState();
+    let lastVisibilityState = document.visibilityState;
+    let signalInterval;
+
+    const timedLog = (txt) => {
+      const timestamp = new Date().toLocaleTimeString();
+      const message = `[${timestamp}] [Canvas2D] ${txt}`;
+      console.log(message);
+      return message;
+    };
+
+    const logStateChange = (nextState, eventName = 'unknown') => {
+      if( state == 'frozen' && eventName != 'resume') {
+        nextState = 'frozen';
+      }
+      const prevState = state;
+      const currentVisibility = document.visibilityState;
+      const prevVisibility = lastVisibilityState;
+      let message;
+
+      if (nextState !== prevState || currentVisibility !== prevVisibility) {
+        message = timedLog(`Event: ${eventName} - State: ${prevState} -> ${nextState} (visibilityState: ${prevVisibility} -> ${currentVisibility})`);
+
+        state = nextState;
+        lastVisibilityState = currentVisibility;
+      } else {
+        message = timedLog(`Event: ${eventName}`);
+      }
+
+      const div = document.createElement('div');
+      div.className = 'state-entry';
+      div.textContent = message;
+      logContainer.appendChild(div);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    };
+
+    const signalChange = (opt1, opt2 ) => {
+      const nextName = ((signal.className === opt1) && (opt2 !== undefined)) ? opt2 : opt1;
+      // timedLog(`Signal: [${signal.className}] -> [${nextName}]`);
+      signal.className = nextName;
+    };
+
+    const timeoutPromise = (ms) => {
+      return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        resolve();
+      }, ms);
+      });
+    };
+
+    const valType = (v) => {
+      if( (typeof v == 'number') || (typeof v == 'string') ) {
+        return v;
+      }
+      return typeof v;
+    };
+
+    const logObjectAPI = (prefix, obj, test = null) => {
+      let _ret = false;
+      if( obj ) {
+        let _s = [];
+        for( let v in obj ) {
+          _s.push(v);
+        }
+        if( test ) {
+          _s = _s.filter((v) => test == typeof(obj[v]));
+          timedLog(_s);
+        }
+        if( _ret = ( _s.length > 0 ) ) {
+          _s.sort();
+          _s.forEach((v) => timedLog(`${prefix}.${v} = ${valType(obj[v])}`));
+        }
+      }
+      return _ret;
+    };
+
+    let params = new URLSearchParams(window.location.search);
+    for( let o in options ) {
+      let p = params.get( o );
+      if( p ) {
+        if( /true/i.test( p ) ) {
+          options[ o ] = true;
+        } else if ( /false/i.test( p ) ) {
+          options[ o ] = false;
+        } else {
+          timedLog(`invalid option value: "${o}" = ${p}`);
+        }
+        params.delete( o );
+      }
+      if( options[ o ] ) {
+        const div = document.createElement('div');
+        div.textContent = o;
+        flags.appendChild(div);
+      }
+    }
+    if( params.size > 0 ) {
+      timedLog('ignored params = '+JSON.stringify(Object.fromEntries(params.entries()),null,2));
+    }
+
+    timedLog('options = '+JSON.stringify(options, null, 2));
+
+    const GL = new function() {
+      const sun = new Image();
+      const moon = new Image();
+      const earth = new Image();
+      let testCtx = canvas.getContext("2d");
+      let ctx, initiated = false, contextLost = false;
+      let firstDraw = true, lastRequest = null;
+
+      const _setImage = (img, url = "") => {
+        if( img.src != url )
+          img.src = url;
+      }
+
+      const _draw = (currentTime) => {
+        if( !ctx || !initiated ) {
+          timedLog('WARNING: context missing in draw()');
+          return;
+        }
+        ctx.globalCompositeOperation = "destination-over"; // Draw new shapes behind existing ones
+        ctx.clearRect(0, 0, 300, 300); // Clear canvas
+
+        ctx.fillStyle = "rgb(0 0 0 / 40%)"; // Shadow color
+        ctx.strokeStyle = "rgb(0 153 255 / 40%)"; // Orbit color
+
+        ctx.save(); // Save the current canvas state
+        ctx.translate(150, 150); // Move origin to the center of the canvas
+
+        ctx.rotate(
+          ((2 * Math.PI) / 60000) * (currentTime % 60000),
+        );
+        ctx.translate(105, 0); // Position earth relative to the center
+        ctx.fillRect(0, -12, 40, 24); // Earth's shadow
+        ctx.drawImage(earth, -12, -12); // Draw earth image
+
+        // Moon
+        ctx.save(); // Save earth's state before moon's rotation
+        ctx.rotate(
+          ((2 * Math.PI) / 6000) * (currentTime % 6000),
+        );
+        ctx.translate(0, 28.5); // Position moon relative to earth
+        ctx.drawImage(moon, -3.5, -3.5); // Draw moon image
+        ctx.restore(); // Restore earth's state
+
+        ctx.restore(); // Restore the initial canvas state (before earth's rotation)
+
+        // Earth's orbit
+        ctx.beginPath();
+        ctx.arc(150, 150, 105, 0, Math.PI * 2, false);
+        ctx.stroke();
+
+        // Sun
+        ctx.drawImage(sun, 0, 0, 300, 300); // Draw sun image at the center
+
+        lastRequest = window.requestAnimationFrame(_draw); // Request next animation frame
+
+        if( firstDraw ) {
+          gls.textContent = 'OK, drawing';
+          firstDraw = false;
+        }
+      };
+
+      const _init = (fail = false) => {
+        if( initiated ) {
+          timedLog('already initiated');
+          return true;
+        }
+        if( !ctx ) {
+          if( testCtx ) {
+            ctx = testCtx;
+            testCtx = null;
+          } else {
+            ctx = canvas.getContext('2d');
+            timedLog('context created');
+          }
+          if( !ctx ) {
+            timedLog('WARNING: context invalid');
+            return false;
+          }
+        } else {
+          timedLog('WARNING: context already present in init');
+          if( !fail ) {
+            gls.textContent = 'FAILED, ctx present in init';
+            fail = true;
+          }
+        }
+        if( contextLost ) {
+          timedLog('WARNING: context was lost');
+          ctx = null;
+          return false;
+        }
+        // try {
+        //   ctx.reset();
+        // } catch( e ) {
+        //   timedLog('WARNING: invalid in init '+e.toString());
+        //   ctx = null;
+        //   if( !fail ) {
+        //     gls.textContent = 'FAILED, ctx invalid in init';
+        //     return _init(true);
+        //   }
+        //   return false;
+        // }
+        _setImage(sun, 'webgl2d_sun.png');
+        _setImage(moon, 'webgl2d_moon.png');
+        _setImage(earth, 'webgl2d_earth.png');
+        if( !fail ) {
+          gls.textContent = 'OK, initiated';
+          timedLog('init complete');
+          initiated = true;
+          return true;
+        }
+        timedLog('init fail');
+        return false;
+      };
+
+      const _cleanup = () => {
+        if( ctx ) {
+          ctx = null;
+          _setImage(sun);
+          _setImage(moon);
+          _setImage(earth);
+          timedLog('context freed');
+          initiated = false;
+        }
+      };
+
+      this.open = () => {
+        if( _init() ) {
+          timedLog('animation started');
+          firstDraw = true;
+          lastRequest = window.requestAnimationFrame(_draw);
+        }
+      };
+
+      this.close = () => {
+        if( lastRequest ) {
+          window.cancelAnimationFrame(lastRequest);
+          lastRequest = null;
+        }
+        if( options.cleanup ) {
+          _cleanup();
+        } else {
+          timedLog('cleanup ignored');
+        }
+      };
+
+      this.lost = () => {
+        ctx = null;
+        initiated = false;
+        contextLost = true;
+        setTimeout(() => {
+          timedLog('context recreate after loss')
+          this.open();
+        }, 1);
+      };
+
+      this.restore = () => {
+        contextLost = false;
+        this.open();
+      };
+
+      if( !testCtx ) {
+        timedLog('WARNING: not available!');
+        gls.textContent = 'OFF';
+        this.open = this.close = this.lost = this.restore = () => {};
+      } else {
+        timedLog('context created');
+      }
+    }();
+
+    // === helper collection
+
+    const API = [ GL ];
+
+    const openAPI = () => {
+      API.forEach((api) => api.open());
+    };
+
+    const closeAPI = () => {
+      API.forEach((api) => api.close());
+    };
+
+    const lostAPI = () => {
+      API.forEach((api) => api.lost());
+    };
+
+    const restoreAPI = () => {
+      API.forEach((api) => api.restore());
+    };
+
+    // === resumeHandler
+
+    const resumeHandler = () => {
+      if( !options.events ) {
+        timedLog('Event: '+event.type+' ignored');
+        return;
+      }
+      logStateChange(getState(), 'resume');
+      openAPI();
+      timedLog('Event: '+event.type+' completed');
+    };
+
+    // === freezeHandler
+
+    const freezeHandler = async () => {
+      if( !options.events ) {
+        timedLog('Event: '+event.type+' ignored');
+        return;
+      }
+      logStateChange('frozen', 'freeze');
+      signalChange('off');
+      closeAPI();
+      timedLog('Event: '+event.type+' completed');
+      await timeoutPromise(500).then(() => timedLog('freeze timeout - NOT REACHED'));
+    };
+
+    // === pagehideHandler
+
+    const pagehideHandler = (event) => {
+      const nextState = event.persisted ? 'frozen' : 'terminated';
+      logStateChange(nextState, 'pagehide');
+      timedLog('Event: '+event.type+' completed');
+    };
+
+    // === contextlostHandler
+
+    const contextlostHandler = (event) => {
+      logStateChange(getState(), event.type);
+      lostAPI();
+      timedLog('Event: '+event.type+' completed');
+    };
+
+    // === contextrestoredHandler
+
+    const contextrestoredHandler = (event) => {
+      logStateChange(getState(), event.type);
+      restoreAPI();
+      timedLog('Event: '+event.type+' completed');
+    };
+    
+    // === init
+
+    const customHandler = { 
+      resume: resumeHandler,
+      freeze: freezeHandler,
+      pagehide: pagehideHandler,
+      contextlost: contextlostHandler,
+      webglcontextlost: contextlostHandler,
+      contextrestored: contextrestoredHandler,
+      webglcontextrestored: contextrestoredHandler
+    };
+
+    signalInterval = setInterval(() => signalChange('on', ''), 1000);
+    API.forEach((api) => api.open());
+
+    ['pageshow', 'pagehide', 'focus', 'blur', 'resume', 'freeze', 'visibilitychange'].forEach((type) => {
+      window.addEventListener(type, customHandler[type] || (() => logStateChange(getState(), type)), { capture: true });
+    });
+
+    ['contextlost', 'contextrestored', 'webglcontextcreationerror', 'webglcontextlost', 'webglcontextrestored'].forEach((type) => {
+      canvas.addEventListener(type, customHandler[type] || (() => logStateChange(getState(), type)), { capture: true });
+    });
+  </script>
+</body>
+</html>
