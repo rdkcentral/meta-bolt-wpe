@@ -4,6 +4,7 @@
   "versionName": "develop",
   "name": "WPE WebKit",
   "packageType": "runtime",
+  "packageSpecifier": "html",
   "entryPoint": "/usr/bin/wpe-rdk.sh",
   "dependencies": {
     "com.rdkcentral.base": "0.4.0"
