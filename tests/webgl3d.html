@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Animated WebGL Example</title>
+  <style>
+    body {
+      font-family:    Arial, sans-serif;
+      padding:        20px;
+      background:     white;
+    }
+    #log {
+      margin-top:     20px;
+      border:         1px solid #ccc;
+      padding:        10px;
+      height:         300px;
+      overflow-y:     auto;
+      background:     #f3f3f3;
+    }
+    h1 {
+      vertical-align: middle;
+    }
+    .state-entry {
+      margin-bottom:  5px;
+      font-size:      14px;
+    }
+    #signal {
+      border-radius:  15px;
+      border:         1px solid black;
+      background:     lightgreen;
+      width:          30px;
+      height:         30px;
+      display:        inline-block;
+    }
+    #gls {
+      display:        inline-block;
+    }
+    #signal.on {
+      background:     green;
+    }
+    #signal.off {
+      background:     red;
+    }
+    #flags {
+      float:          right;
+    }
+    #flags div {
+      /* display:        inline-block; */
+      margin:         0 10px;
+      font-variant:   small-caps;
+      font-size:      .5em;
+    }
+    canvas {
+      border:         1px solid black;
+    }
+  </style>
+</head>
+<body>
+  <h1>Page Lifecycle State Logger, WebGL <div id="signal">&nbsp;</div> <div id="flags"></div></h1>
+  <canvas id="webgl-canvas" width="600" height="200"></canvas>
+
+  <div id="log"></div>
+
+  <div>&nbsp;</div>
+  <div>Context3D: <div id="gls">&nbsp;</div></div>
+
+  <script id="vertex-shader" type="x-shader/x-vertex">
+    attribute vec2 a_position;
+    uniform vec2 u_resolution;
+    uniform vec2 u_translation;
+    uniform float u_rotation;
+    uniform vec2 u_scale;
+
+    void main() {
+      vec2 scaledPosition = a_position * u_scale;
+      vec2 rotatedPosition = vec2(
+        scaledPosition.x * cos(u_rotation) - scaledPosition.y * sin(u_rotation),
+        scaledPosition.x * sin(u_rotation) + scaledPosition.y * cos(u_rotation)
+      );
+      vec2 position = rotatedPosition + u_translation;
+      vec2 zeroToOne = position / u_resolution;
+      vec2 clipSpace = (zeroToOne * 2.0) - 1.0;
+      gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
+    }
+  </script>
+
+  <script id="fragment-shader" type="x-shader/x-fragment">
+    precision mediump float;
+    uniform vec4 u_color;
+
+    void main() {
+      gl_FragColor = u_color;
+    }
+  </script>
+
+  <script>
+    const logContainer = document.getElementById('log');
+    const signal = document.getElementById('signal');
+    const flags = document.getElementById('flags');
+    const gls = document.getElementById('gls');
+    const canvas = document.getElementById('webgl-canvas');
+    let options = {
+      cleanup: true,
+      dropgl: false,
+      events: true
+    };
+
+    const getState = () => {
+      if (document.visibilityState === 'hidden') {
+        return 'hidden';
+      }
+      if (document.hasFocus()) {
+        return 'active';
+      }
+        return 'passive';
+    };
+
+    let state = getState();
+    let lastVisibilityState = document.visibilityState;
+    let signalInterval;
+
+    const timedLog = (txt) => {
+      const timestamp = new Date().toLocaleTimeString();
+      const message = `[${timestamp}] [WebGL] ${txt}`;
+      console.log(message);
+      return message;
+    };
+
+    const logStateChange = (nextState, eventName = 'unknown') => {
+      if( state == 'frozen' && eventName != 'resume') {
+        nextState = 'frozen';
+      }
+      const prevState = state;
+      const currentVisibility = document.visibilityState;
+      const prevVisibility = lastVisibilityState;
+      let message;
+
+      if (nextState !== prevState || currentVisibility !== prevVisibility) {
+        message = timedLog(`Event: ${eventName} - State: ${prevState} -> ${nextState} (visibilityState: ${prevVisibility} -> ${currentVisibility})`);
+
+        state = nextState;
+        lastVisibilityState = currentVisibility;
+      } else {
+        message = timedLog(`Event: ${eventName}`);
+      }
+
+      const div = document.createElement('div');
+      div.className = 'state-entry';
+      div.textContent = message;
+      logContainer.appendChild(div);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    };
+
+    const signalChange = (opt1, opt2 ) => {
+      const nextName = ((signal.className === opt1) && (opt2 !== undefined)) ? opt2 : opt1;
+      // timedLog(`Signal: [${signal.className}] -> [${nextName}]`);
+      signal.className = nextName;
+    };
+
+    const timeoutPromise = (ms) => {
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          resolve();
+        }, ms);
+      });
+    };
+
+    const valType = (v) => {
+      if( (typeof v == 'number') || (typeof v == 'string') ) {
+        return v;
+      }
+      return typeof v;
+    };
+
+    const logObjectAPI = (prefix, obj, test = null) => {
+      let _ret = false;
+      if( obj ) {
+        let _s = [];
+        for( let v in obj ) {
+          _s.push(v);
+        }
+        if( test ) {
+          _s = _s.filter((v) => test == typeof(obj[v]));
+          timedLog(_s);
+        }
+        if( _ret = ( _s.length > 0 ) ) {
+          _s.sort();
+          _s.forEach((v) => timedLog(`${prefix}.${v} = ${valType(obj[v])}`));
+        }
+      }
+      return _ret;
+    };
+
+    let params = new URLSearchParams(window.location.search);
+    for( let o in options ) {
+      let p = params.get( o );
+      if( p ) {
+        if( /true/i.test( p ) ) {
+          options[ o ] = true;
+        } else if ( /false/i.test( p ) ) {
+          options[ o ] = false;
+        } else {
+          timedLog(`invalid option value: "${o}" = ${p}`);
+        }
+        params.delete( o );
+      }
+      if( options[ o ] ) {
+        const div = document.createElement('div');
+        div.textContent = o;
+        flags.appendChild(div);
+      }
+    }
+    if( params.size > 0 ) {
+      timedLog('ignored params = '+JSON.stringify(Object.fromEntries(params.entries()),null,2));
+    }
+
+    timedLog('options = '+JSON.stringify(options, null, 2));
+
+    const GL = new function() {
+      let testGl = canvas.getContext('webgl');
+      let gl, program, vertexShader, fragmentShader, positionBuffer, loseContextExtension;
+      let positionAttributeLocation, resolutionUniformLocation, translationUniformLocation
+      let rotationUniformLocation, scaleUniformLocation, colorUniformLocation;
+      let initiated = false, contextLost = false;
+      let firstDraw = true, lastRequest = null;
+
+      const _getGLConstName = (val) => {
+        let _gl = testGl || gl;
+        if( _gl ) {
+          for( let v in _gl ) {
+            if( (typeof _gl[v] === 'number') && (_gl[v] === val) ) {
+              return v;
+            }
+          }
+        }
+        return 'UNKNOWN';
+      };
+
+      const _checkError = (fun) => {
+        let _gl = testGl || gl;
+        let _ret = false, lastError;
+        if( _gl ) {
+          while( (lastError = _gl.getError()) != _gl.NO_ERROR ) {
+            _ret = _getGLConstName(lastError);
+            timedLog(`WARNING: [${fun}] error: ${_ret}`);
+          }
+        }
+        return _ret;
+      };
+
+      const _getLoseContext = () => {
+        if( !loseContextExtension ) {
+          let _loseContextExtension;
+          loseContextExtension = {
+            loseContext:    () => true,
+            restoreContext: () => true
+          };
+          try {
+            _loseContextExtension = gl.getExtension('WEBGL_lose_context');
+            if( _loseContextExtension && !_checkError('_getLoseContext') ) {
+              loseContextExtension = { 
+                loseContext: () => {
+                  if( options.dropgl ) {
+                    _loseContextExtension.loseContext();
+                  } else {
+                    return true;
+                  }
+                  let err = _checkError('loseContext');
+                  return !err || (err == 'CONTEXT_LOST_WEBGL');
+                },
+                restoreContext: () => { 
+                  _loseContextExtension.restoreContext();
+                  return !_checkError('restoreContext');
+                }
+              };
+            }
+          } catch( e ) {
+            timedLog('WARNING: context free failed: '+e.toString());
+          }
+        }
+        return loseContextExtension;
+      };
+
+      // Animation variables
+      let translation = [100, 100];
+      let rotation = 0;
+      let scale = [1, 1];
+      const color = [0.2, 0.5, 0.8, 1.0]; // Blue color
+
+      let lastTime = 0;
+      const _draw = (currentTime) => {
+        if( !gl || !initiated ) {
+          timedLog('WARNING: context missing in draw()');
+          return;
+        }
+        currentTime *= 0.001; // Convert to seconds
+        const deltaTime = currentTime - lastTime;
+        lastTime = currentTime;
+
+        // Update animation properties
+        translation[0] += 50 * deltaTime; // Move right
+        if (translation[0] > canvas.width + 50) {
+          translation[0] = -50; // Wrap around
+        }
+        rotation += 1.0 * deltaTime; // Rotate 1 radian per second
+
+        // Clear the canvas
+        gl.clearColor(0.9, 0.9, 0.9, 1.0); // Light gray background
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        // Set uniforms for translation, rotation, scale, and color
+        gl.uniform2fv(translationUniformLocation, translation);
+        gl.uniform1f(rotationUniformLocation, rotation);
+        gl.uniform2fv(scaleUniformLocation, scale);
+        gl.uniform4fv(colorUniformLocation, color);
+
+        // Draw the rectangle
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+        lastRequest = window.requestAnimationFrame(_draw); // Request next animation frame
+
+        if( firstDraw ) {
+          gls.textContent = 'OK, drawing';
+          firstDraw = false;
+        }
+      };
+
+      const _init = (fail = false) => {
+        if( initiated ) {
+          timedLog('already initiated');
+          return true;
+        }
+        if( !gl ) {
+          if( testGl ) {
+            gl = testGl;
+            testGl = null;
+          } else {
+            gl = canvas.getContext('webgl');
+            timedLog('context created');
+          }
+          if( !gl ) {
+            timedLog('WARNING: context invalid');
+            return false;
+          }
+        } else {
+          timedLog('WARNING: context already present in init');
+          if( !fail ) {
+            gls.textContent = 'FAILED, ctx present in init';
+            fail = true;
+          }
+        }
+        if( contextLost ) {
+          timedLog('WARNING: context was lost');
+          if( _getLoseContext().restoreContext() ) {
+            timedLog('WARNING: ...restore issued');
+            gl = null;
+          } else {
+            timedLog('WARNING: ...restore failed');
+          }
+          return false;
+        }
+        try {
+          gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+        } catch( e ) {
+          timedLog('WARNING: invalid in init: '+e.toString());
+          gl = null;
+          if( !fail ) {
+            gls.textContent = 'FAILED, ctx invalid in init';
+            return _init(true);
+          }
+          return false;
+        }
+        // Shader compilation (simplified, in a real app, you'd likely have helper functions)
+        const vertexShaderSource = document.getElementById('vertex-shader').text;
+        const fragmentShaderSource = document.getElementById('fragment-shader').text;
+
+        try {
+          vertexShader = gl.createShader(gl.VERTEX_SHADER);
+          gl.shaderSource(vertexShader, vertexShaderSource);
+          gl.compileShader(vertexShader);
+        } catch( e ) {
+          timedLog('WARNING: invalid in init: '+e.toString());
+          vertexShader = gl = null;
+          if( !fail ) {
+            gls.textContent = 'FAILED, ctx invalid in init';
+            return _init(true);
+          }
+          return false;
+        }
+
+        fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fragmentShader, fragmentShaderSource);
+        gl.compileShader(fragmentShader);
+
+        program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+        gl.useProgram(program);
+
+        // Get attribute and uniform locations
+        positionAttributeLocation = gl.getAttribLocation(program, 'a_position');
+        resolutionUniformLocation = gl.getUniformLocation(program, 'u_resolution');
+        translationUniformLocation = gl.getUniformLocation(program, 'u_translation');
+        rotationUniformLocation = gl.getUniformLocation(program, 'u_rotation');
+        scaleUniformLocation = gl.getUniformLocation(program, 'u_scale');
+        colorUniformLocation = gl.getUniformLocation(program, 'u_color');
+
+        // Set resolution
+        gl.uniform2f(resolutionUniformLocation, canvas.width, canvas.height);
+
+        // Create a buffer for the rectangle
+        positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+        // Define the rectangle vertices
+        const positions = [
+          -50, -50,
+          50, -50,
+          -50,  50,
+          -50,  50,
+          50, -50,
+          50,  50,
+        ];
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+        // Enable the attribute
+        gl.enableVertexAttribArray(positionAttributeLocation);
+        gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+
+        if( !fail ) {
+          if( !_checkError('init') ) {
+            gls.textContent = 'OK, initiated';
+            timedLog('init complete');
+            initiated = true;
+            return true;
+          }
+          gls.textContent = 'FAILED, init error';
+          return false;
+        }
+        if( !_checkError('init') ) {
+          timedLog('init fail');
+        }
+        return false;
+      };
+      
+      const _cleanup = () => {
+        if( gl ) {
+          if( program ) {
+            gl.useProgram(null);
+            gl.deleteProgram(program);
+            program = null;
+            positionAttributeLocation = resolutionUniformLocation =  translationUniformLocation = null;
+            rotationUniformLocation = scaleUniformLocation =  colorUniformLocation = null;
+          }
+          if( vertexShader ) {
+            gl.deleteShader(vertexShader);
+            vertexShader = null;
+          }
+          if( fragmentShader ) {
+            gl.deleteShader(fragmentShader);
+            fragmentShader = null;
+          }
+          if( positionBuffer ) {
+            gl.deleteBuffer(positionBuffer);
+            positionBuffer = null;
+          }
+          if( _getLoseContext().loseContext() ) {
+            gl = null;
+            timedLog('context disposed');
+          }
+          timedLog('context freed');
+          initiated = false;
+        }
+      };
+
+      this.open = () => {
+        if( _init() ) {
+          timedLog('starting animation');
+          firstDraw = true;
+          lastRequest = window.requestAnimationFrame(_draw);
+        }
+      };
+
+      this.close = () => {
+        if( lastRequest ) {
+            window.cancelAnimationFrame(lastRequest);
+            lastRequest = null;
+        }
+        if( options.cleanup ) {
+          _cleanup();
+        } else {
+          timedLog('cleanup ignored');
+        }
+      };
+
+      this.lost = () => {
+        _checkError('lost');
+        gl = program = vertexShader = fragmentShader = positionBuffer = null;
+        positionAttributeLocation = resolutionUniformLocation = translationUniformLocation = null;
+        rotationUniformLocation = scaleUniformLocation = colorUniformLocation = null;
+        initiated = false;
+        contextLost = true;
+        setTimeout(() => {
+          timedLog('context recreate after loss')
+          this.open();
+        }, 1);
+      };
+
+      this.restore = () => {
+        contextLost = false;
+        setTimeout(() => {
+          timedLog('context recreate after resume')
+          this.open();
+        }, 1);
+      };
+
+      if( !testGl ) {
+        timedLog('WARNING: not available!');
+        gls.textContent = 'OFF';
+        this.open = this.close = this.lost = this.restore = () => {};
+      } else {
+        timedLog('context created');
+      }
+    }();
+
+    // === helper collection
+
+    const API = [ GL ];
+
+    const openAPI = () => {
+      API.forEach((api) => api.open());
+    };
+
+    const closeAPI = () => {
+      API.forEach((api) => api.close());
+    };
+
+    const lostAPI = () => {
+      API.forEach((api) => api.lost());
+    };
+
+    const restoreAPI = () => {
+      API.forEach((api) => api.restore());
+    };
+
+    // === resumeHandler
+    
+    const resumeHandler = () => {
+      if( !options.events ) {
+        timedLog('Event: '+event.type+' ignored');
+        return;
+      }
+      logStateChange(getState(), 'resume');
+      openAPI();
+      timedLog('Event: '+event.type+' completed');
+    };
+
+    // === freezeHandler
+
+    const freezeHandler = async () => {
+      if( !options.events ) {
+        timedLog('Event: '+event.type+' ignored');
+        return;
+      }
+      logStateChange('frozen', 'freeze');
+      signalChange('off');
+      closeAPI();
+      timedLog('Event: '+event.type+' completed');
+      await timeoutPromise(500).then(() => timedLog('freeze timeout - NOT REACHED'));
+    };
+
+    // === pagehideHandler
+
+    const pagehideHandler = (event) => {
+      const nextState = event.persisted ? 'frozen' : 'terminated';
+      logStateChange(nextState, 'pagehide');
+      timedLog('Event: '+event.type+' completed');
+    };
+
+    // === contextlostHandler
+
+    const contextlostHandler = (event) => {
+      event.preventDefault();
+      logStateChange(getState(), event.type);
+      lostAPI();
+      timedLog('Event: '+event.type+' completed');
+    };
+
+    // === contextrestoredHandler
+
+    const contextrestoredHandler = (event) => {
+      logStateChange(getState(), event.type);
+      restoreAPI();
+      timedLog('Event: '+event.type+' completed');
+    };
+
+    // === init
+
+    const customHandler = { 
+      resume: resumeHandler,
+      freeze: freezeHandler,
+      pagehide: pagehideHandler,
+      contextlost: contextlostHandler,
+      webglcontextlost: contextlostHandler,
+      contextrestored: contextrestoredHandler,
+      webglcontextrestored: contextrestoredHandler
+    };
+
+    signalInterval = setInterval(() => signalChange('on', ''), 1000);
+    API.forEach((api) => api.open());
+
+    ['pageshow', 'pagehide', 'focus', 'blur', 'resume', 'freeze', 'visibilitychange'].forEach((type) => {
+      window.addEventListener(type, customHandler[type] || (() => logStateChange(getState(), type)), { capture: true });
+    });
+
+    ['contextlost', 'contextrestored', 'webglcontextcreationerror', 'webglcontextlost', 'webglcontextrestored'].forEach((type) => {
+      canvas.addEventListener(type, customHandler[type] || (() => logStateChange(getState(), type)), { capture: true });
+    });
+  </script>
+</body>
+</html>
