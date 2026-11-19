@@ -19,3 +19,11 @@ Index: git/BrowserLauncher/src/wpewebkit/wpewebkitconfig.cpp
      g_setenv(varName, value.c_str(), replace);
  }
  
+@@ -495,7 +501,6 @@ void WpeWebKitConfig::setEnvironment() c
+     if (auto backend = findLibrary(m_launchConfig->runtimeDir(), backendName); !backend.empty())
+     {
+         setEnvVar("WPE_BACKEND_LIBRARY", backend, false);
+-        g_message("WPE_BACKEND_LIBRARY = %s", g_getenv("WPE_BACKEND_LIBRARY"));
+     }
+     else
+     {

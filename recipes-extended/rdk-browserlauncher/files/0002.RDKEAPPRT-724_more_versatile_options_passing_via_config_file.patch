@@ -7,65 +7,65 @@ Index: git/BrowserLauncher/src/launchconfig.cpp
 ===================================================================
 --- git.orig/BrowserLauncher/src/launchconfig.cpp
 +++ git/BrowserLauncher/src/launchconfig.cpp
-@@ -116,12 +116,11 @@ namespace
+@@ -116,12 +116,12 @@ namespace
      // A helper utility, converts a string value to the type of launch option.
      // It is probably full of subtle bugs, use with caution.
      template <typename T>
 -    T processOption(const std::string& val)
-+    T processOption(const std::string& val, bool invert = false)
++    T processOption(const std::string& val, bool strict = true, bool invert = false)
      {
++        auto _compare = strict ? strcmp : g_ascii_strcasecmp;
          if constexpr (std::is_same_v<T, bool>)
          {
 -            return (val.empty() || val == "false" || val == "0")
 -                ?  false : true;
-+            return (val.empty() || (g_ascii_strcasecmp(val.c_str(), "false") == 0) || (val == "0")) == invert;
++            return (val.empty() || (_compare(val.c_str(), "false") == 0) || (val == "0")) == invert;
          }
          else if constexpr (std::is_same_v<T, LocalFilePath>)
          {
-@@ -152,11 +151,11 @@ namespace
+@@ -143,7 +143,7 @@ namespace
+             std::stringstream ss { val };
+             while (std::getline(ss, token, ';'))
+             {
+-                auto fullPath = processOption<LocalFilePath>(token);
++                auto fullPath = processOption<LocalFilePath>(token, strict);
+                 if (!fullPath.empty())
+                     result.emplace_back(std::move(fullPath));
+             }
+@@ -152,11 +152,11 @@ namespace
          else if constexpr (std::is_same_v<T, LoadFailurePolicy>)
          {
              auto result = LoadFailurePolicy::Terminate;
 -            if (val == "terminate")
-+            if (g_ascii_strcasecmp(val.c_str(), "terminate") == 0)
++            if (_compare(val.c_str(), "terminate") == 0)
                  result = LoadFailurePolicy::Terminate;
 -            else if (val == "display")
-+            else if (g_ascii_strcasecmp(val.c_str(), "display") == 0)
++            else if (_compare(val.c_str(), "display") == 0)
                  result = LoadFailurePolicy::Display;
 -            else if (val == "ignore")
-+            else if (g_ascii_strcasecmp(val.c_str(), "ignore") == 0)
++            else if (_compare(val.c_str(), "ignore") == 0)
                  result = LoadFailurePolicy::Ignore;
              return result;
          }
-@@ -190,8 +189,72 @@ namespace
+@@ -190,8 +190,62 @@ namespace
          return homePrivateSizeBytes;
      }
  
 -}  // namespace
-+    std::string stringify(const json& j)
-+    {
-+        if(j.is_string())
-+        {
-+            return j.get<std::string>();
-+        }
-+        return j.dump();
-+    }
-+
-+    void setProcessEnv(ProcessEnvironment &envs, const std::string &key, const std::string &val)
-+    {
-+        envs[key] = val;
-+    }
- 
 +    enum key_match_e {
 +        MATCH_POSITIVE  = 0,
 +        MATCH_NEGATIVE  = 1,
 +        MATCH_NONE      = 2
 +    };
-+
-+    key_match_e matchKey(const std::string &key, const std::string &var, bool keyFlag = true)
+ 
++    key_match_e matchKey(const std::string &key, const std::string &var, bool strict, bool keyFlag = true)
 +    {
 +        auto ret = MATCH_NONE;
-+        if (g_ascii_strcasecmp(key.c_str(), var.c_str()) == 0)
++        if (strict)
++        {
++            return ( key == var ) ? MATCH_POSITIVE : MATCH_NONE;
++        }
++        else if (g_ascii_strcasecmp(key.c_str(), var.c_str()) == 0)
 +        {
 +            ret = MATCH_POSITIVE;
 +        }
@@ -73,14 +73,14 @@ Index: git/BrowserLauncher/src/launchconfig.cpp
 +        {
 +            if (keyFlag)
 +            {
-+                ret = matchKey(key.substr(6), var, false);
++                ret = matchKey(key.substr(6), var, strict, false);
 +            }
 +        }
 +        else if (g_ascii_strncasecmp(key.c_str(), "disable", 7) == 0)
 +        {
 +            if (keyFlag)
 +            {
-+                ret = matchKey(key.substr(7), var, false);
++                ret = matchKey(key.substr(7), var, strict, false);
 +                if (ret == MATCH_POSITIVE)
 +                {
 +                    ret = MATCH_NEGATIVE;
@@ -111,110 +111,128 @@ Index: git/BrowserLauncher/src/launchconfig.cpp
  
  LaunchConfig::LaunchConfig(const std::string &configPath)
  {
-@@ -218,34 +281,40 @@ LaunchConfig::LaunchConfig(const std::st
-         if (configuration.contains("options"))
-         {
-             auto options = configuration["options"];
--            for (auto& [_, opt] : options.items())
-+            for (auto& [key, val] : options.items())
-             {
--                const auto& key = opt["key"].get<std::string>();
--                const auto& val = opt["value"].get<std::string>();
--
--#define HANDLE_RDK_CONFIG_OPTION(type_, name_, init_, help_)        \
--                if (key == #name_)                                  \
--                {                                                   \
--                    m_##name_ = processOption<type_>(val);          \
--                }                                                   \
-+                if (!val.is_primitive())
-+                {
-+                    if (val.contains("key") && val["key"].is_primitive() &&
-+                        val.contains("value") && val["value"].is_primitive())
-+                    {
-+                        applyOption(stringify(val["key"]), stringify(val["value"]));
-+                    }
-+                }
-                 else
--
--                FOR_EACH_RDK_CONFIG_OPTION(HANDLE_RDK_CONFIG_OPTION)
+@@ -231,7 +285,6 @@ LaunchConfig::LaunchConfig(const std::st
                  {
--                    g_message("Unknown option: %s", key.c_str());
-+                    applyOption(key, stringify(val));
+                     g_message("Unknown option: %s", key.c_str());
                  }
 -#undef HANDLE_RDK_CONFIG_OPTION
              }
          }
  
-         if (configuration.contains("envs"))
-         {
-             auto envs = configuration["envs"];
--            for (auto& [_, opt] : envs.items())
-+            for (auto& [key, val] : envs.items())
-             {
--                const auto& key = opt["key"].get<std::string>();
--                const auto& val = opt["value"].get<std::string>();
--                m_browserEnvs[key] = val;
-+                if (!val.is_primitive())
-+                {
-+                    if (val.contains("key") && val["key"].is_primitive() &&
-+                        val.contains("value") && val["value"].is_primitive())
-+                    {
-+                        setProcessEnv(m_browserEnvs, stringify(val["key"]), stringify(val["value"]));
-+                    }
-+                }
-+                else
-+                {
-+                    setProcessEnv(m_browserEnvs, key, stringify(val));
-+                }
-             }
-         }
-     } while (0);
-@@ -350,17 +419,25 @@ void LaunchConfig::applyCmdLineOptions(s
+@@ -350,13 +403,14 @@ void LaunchConfig::applyCmdLineOptions(s
+     normalizeQuotas();
+ }
+ 
+-void LaunchConfig::applyOption(const std::string& key, const std::string& val)
++void LaunchConfig::applyOption(const std::string& key, const std::string& val, bool strict)
  {
-     for (const auto& [key, val] : options)
-     {
 -#define HANDLE_RDK_CONFIG_OPTION(type_, name_, init_, help_)        \
--        if (key == #name_)                                          \
--        {                                                           \
--            m_##name_ = processOption<type_>(val);                  \
--        }                                                           \
--        else
-+        applyOption(key, val);
+-    if (key == #name_)                                              \
+-    {                                                               \
+-        m_##name_ = processOption<type_>(val);                      \
+-    }                                                               \
++    key_match_e match = MATCH_NONE;
++#define HANDLE_RDK_CONFIG_OPTION(type_, name_, init_, help_)                    \
++    if ((match = matchKey(key, #name_, strict)) != MATCH_NONE)                  \
++    {                                                                           \
++        m_##name_ = processOption<type_>(val, strict, match == MATCH_NEGATIVE); \
++    }                                                                           \
+     else
+ 
+     FOR_EACH_RDK_CONFIG_OPTION(HANDLE_RDK_CONFIG_OPTION)
+@@ -366,6 +420,22 @@ void LaunchConfig::applyOption(const std
+ #undef HANDLE_RDK_CONFIG_OPTION
+ }
+ 
++std::string stringify(const json &j)
++{
++    if (j.is_string())
++    {
++        return j.get<std::string>();
++    }
++    else if (j.is_number() && j == 0)
++    {
++        return "0";
++    }
++    else
++    {
++        return j.dump();
 +    }
 +}
- 
--        FOR_EACH_RDK_CONFIG_OPTION(HANDLE_RDK_CONFIG_OPTION)
--        {
--            g_message("Unknown option: %s", key.c_str());
--        }
--#undef HANDLE_RDK_CONFIG_OPTION
-+bool LaunchConfig::applyOption(const std::string &key, const std::string &val)
-+{
-+    key_match_e match = MATCH_NONE;
-+#define HANDLE_RDK_CONFIG_OPTION(type_, name_, init_, help_)            \
-+    if ((match = matchKey(key, #name_)) != MATCH_NONE)             \
-+    {                                                                   \
-+        m_##name_ = processOption<type_>(val, match == MATCH_NEGATIVE); \
-+    }                                                                   \
-+    else
 +
-+    FOR_EACH_RDK_CONFIG_OPTION(HANDLE_RDK_CONFIG_OPTION)
-+    {
-+        g_message("Unknown option: %s", key.c_str());
-+        return false;
+ // The override blobs the container environment carries, as defined by
+ // urn:rdk:config:overrides in the OCI package spec. Each holds a flat map of
+ // option name to value, naming the options declared in launchconfigoptions.h.
+@@ -379,23 +449,49 @@ void LaunchConfig::applyConfigOverrides(
      }
-+#undef HANDLE_RDK_CONFIG_OPTION
-+    return true;
+ 
+     g_message("Applying overrides from %s", source);
+-    for (auto& [key, val] : config.items())
++
++    if (config.contains("options"))
+     {
+-        if (!val.is_string())
++        auto options = config["options"];
++        for (auto& [key, val] : options.items())
+         {
+-            if (!val.is_primitive() || val.is_null())
++            if (!val.is_string())
+             {
+-                g_warning("Option %s in %s is not a value, ignoring", key.c_str(), source);
+-                continue;
++                if (!val.is_primitive() || val.is_null())
++                {
++                    g_warning("Option %s in %s is not a value, ignoring", key.c_str(), source);
++                    continue;
++                }
++                g_message("Option %s in %s is not a string, converting", key.c_str(), source);
+             }
+-            g_warning("Option %s in %s is not a string, converting", key.c_str(), source);
++
++            applyOption(key, stringify(val), false);
+         }
++    }
++    else
++    {
++        g_message("No options in %s", source);
++    }
+ 
+-        std::string val_str = val.is_string() ? val.get<std::string>()
+-                            : (val.is_number() && val == 0) ? "0"
+-                            : val.dump();
+-        applyOption(key, val_str);
++    if (config.contains("envs"))
++    {
++        auto envs = config["envs"];
++        for (auto& [key, val] : envs.items())
++        {
++            if (!val.is_string())
++            {
++                g_warning("Env %s in %s is not a string, ignoring", key.c_str(), source);
++                continue;
++            }
++
++            m_browserEnvs[key] = stringify(val);
++        }
+     }
++    else
++    {
++        g_message("No envs in %s", source);
++    }
++
+     normalizeQuotas();
  }
+ 
 Index: git/BrowserLauncher/src/launchconfig.h
 ===================================================================
 --- git.orig/BrowserLauncher/src/launchconfig.h
 +++ git/BrowserLauncher/src/launchconfig.h
-@@ -56,6 +56,7 @@ public:
+@@ -56,7 +56,7 @@ public:
+     void printConfig() const;
  
  private:
-     int estimateLocalStorageQuota() const;
-+    bool applyOption(const std::string &key, const std::string& value);
+-    void applyOption(const std::string& key, const std::string& val);
++    void applyOption(const std::string& key, const std::string& val, bool strict = true);
+     void normalizeQuotas();
  
- #define DEFINE_OPTIONS(type_, name_, init_, help_)     \
-     type_ m_##name_ init_;
+     int estimateLocalStorageQuota() const;
