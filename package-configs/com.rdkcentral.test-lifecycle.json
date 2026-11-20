@@ -1,0 +1,27 @@
+{
+  "id": "com.rdkcentral.test-lifecycle",
+  "version": "0.5.0",
+  "versionName": "develop",
+  "name": "WPE WebKit LifeCycle Test",
+  "packageType": "application",
+  "entryPoint": "file:///usr/share/tests/lifecycle.html",
+  "dependencies": {
+    "com.rdkcentral.wpe": "0.5.0"
+  },
+  "permissions": [
+    "urn:rdk:permission:internet",
+    "urn:rdk:permission:firebolt",
+    "urn:rdk:permission:thunder",
+    "urn:rdk:permission:rialto"
+  ],
+  "configuration": {
+    "urn:rdk:config:overrides": {
+      "application": {
+        "options": {
+          "indexedDB": true,
+          "mediaStream": true
+        }
+      }
+    }
+  }
+}

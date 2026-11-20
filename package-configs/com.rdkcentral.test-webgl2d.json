@@ -1,0 +1,16 @@
+{
+  "id": "com.rdkcentral.test-webgl2d",
+  "version": "0.5.0",
+  "versionName": "develop",
+  "name": "WPE WebKit WebGL2D Test",
+  "packageType": "application",
+  "entryPoint": "file:///usr/share/tests/webgl2d.html",
+  "dependencies": {
+    "com.rdkcentral.wpe": "0.5.0"
+  },
+  "permissions": [
+    "urn:rdk:permission:firebolt"
+  ],
+  "configuration": {
+  }
+}

@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Page Lifecycle State Logger</title>
+  <style>
+    body {
+      font-family:    Arial, sans-serif;
+      padding:        20px;
+      background:     white;
+    }
+    #log {
+      margin-top:     20px;
+      border:         1px solid #ccc;
+      padding:        10px;
+      height:         300px;
+      overflow-y:     auto;
+      background:     #f3f3f3;
+    }
+    h1 {
+      vertical-align: middle;
+    }
+    .state-entry {
+      margin-bottom:  5px;
+      font-size:      14px;
+    }
+    #signal {
+      border-radius:  15px;
+      border:         1px solid black;
+      background:     lightgreen;
+      width:          30px;
+      height:         30px;
+      display:        inline-block;
+    }
+    #idb, #wss, #rtc, #bcc {
+      display:        inline-block;
+    }
+    #signal.on {
+      background:     green;
+    }
+    #signal.off {
+      background:     red;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Page Lifecycle State Logger <div id="signal">&nbsp;</div></h1>
+
+  <div id="log"></div>
+
+  <div>&nbsp;</div>
+  <div>IndexedDB: <div id="idb">&nbsp;</div></div>
+  <div>BroadcastChannel: <div id="bcc">&nbsp;</div></div>
+  <div>WebSocket: <div id="wss">&nbsp;</div></div>
+  <div>WebRTC:<div id="rtc">
+      <canvas id="canvas" width="16" height="12"></canvas>
+      <video id="remoteVideo" width="16" height="12" autoplay></video>
+  </div></div>
+  <script>
+    
+    // === general
+
+    const logContainer = document.getElementById('log');
+    const signal = document.getElementById('signal');
+    const idb = document.getElementById('idb');
+    const wss = document.getElementById('wss');
+    const rtc = document.getElementById('rtc');
+    const bcc = document.getElementById('bcc');
+
+    const getState = () => {
+      if (document.visibilityState === 'hidden') {
+        return 'hidden';
+      }
+      if (document.hasFocus()) {
+        return 'active';
+      }
+      return 'passive';
+    };
+
+    let state = getState();
+    let lastVisibilityState = document.visibilityState;
+    let signalInterval;
+
+    const timedLog = (txt) => {
+      const timestamp = new Date().toLocaleTimeString();
+      const message = `[${timestamp}] ${txt}`;
+      console.log(message);
+      return message;
+    };
+
+    const logStateChange = (nextState, eventName = 'unknown') => {
+      if( state == 'frozen' && eventName != 'resume') {
+        nextState = 'frozen';
+      }
+      const prevState = state;
+      const currentVisibility = document.visibilityState;
+      const prevVisibility = lastVisibilityState;
+      let message;
+
+      if (nextState !== prevState || currentVisibility !== prevVisibility) {
+        message = timedLog(`Event: ${eventName} - State: ${prevState} -> ${nextState} (visibilityState: ${prevVisibility} -> ${currentVisibility})`);
+
+        state = nextState;
+        lastVisibilityState = currentVisibility;
+      } else {
+        message = timedLog(`Event: ${eventName}`);
+      }
+
+      const div = document.createElement('div');
+      div.className = 'state-entry';
+      div.textContent = message;
+      logContainer.appendChild(div);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    };
+
+    const signalChange = (opt1, opt2 ) => {
+      const nextName = ((signal.className === opt1) && (opt2 !== undefined)) ? opt2 : opt1;
+      // timedLog(`Signal: [${signal.className}] -> [${nextName}]`);
+      signal.className = nextName;
+    };
+
+    const timeoutPromise = (ms) => {
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          resolve();
+        }, ms);
+      });
+    };
+
+    // === IndexedDB
+
+    const DB = new function() {
+      const api = window.indexedDB;
+      let request;
+      let timeout;
+      let database;
+
+      const _cleanup = () => {
+        if( database ) {
+          database.close();
+          database = null;
+          timedLog('db closed');
+        }
+        if( timeout ) {
+          clearTimeout(timeout);
+          timeout = null;
+        }
+      };
+
+      const _read = (db) => {
+        if( !request || request.result !== db )
+          return Promise.reject('finished');
+        return new Promise((resolve, reject) => { 
+          let tx = db.transaction('users', 'readonly');
+          let store = tx.objectStore("users");
+          let data = store.get(666);
+          data.onsuccess = (event) => {
+            idb.textContent = `${event.target.result.age}`;
+            timedLog(`db read "age": ${event.target.result.age}`);
+            resolve();
+          };
+          data.onerror = () => reject('read error');
+        });
+      };
+
+      const _write = (db) => {
+        if( !request || request.result !== db )
+          return Promise.reject('finished');
+        return new Promise((resolve, reject) => { 
+          let tx = db.transaction('users', 'readwrite');
+          let store = tx.objectStore("users");
+          let data = store.put({ id: 666, name: { first: 'John', last: 'Doe'}, age: Math.floor(18+82*Math.random())});
+          data.onsuccess = resolve;
+          data.onerror = () => reject('write error');
+        });
+      };
+
+      const _run = (_db) => {
+        let db = _db;
+        return _write(db)
+          .then(() => _read(db))
+          .then(() => timeoutPromise(1000))
+          .then(() => { _run(db); })
+          .catch((stage) => timedLog(`db ${stage}`));
+      };
+
+      this.open = () => {
+        _cleanup();
+        request = indexedDB.open('TestDB', 1);
+        request.onupgradeneeded = () => {
+          let store = request.result.createObjectStore('users', {keyPath: 'id'});
+          let index = store.createIndex('index', ['name.last', 'name.first']);
+        };
+        request.onsuccess = () => {
+          database = request.result;
+          timedLog('db opened');
+          idb.textContent = 'ON';
+          _run(request.result);
+        };
+        request.onerror = _cleanup;
+      };
+
+      this.close = _cleanup;
+
+      if( !window.indexedDB ) {
+        timedLog('WARNING: indexedDB not available!');
+        idb.textContent = 'OFF';
+        this.open = this.close = () => {};
+      }
+    }();
+
+    // === BroadcastChannel
+
+    const BC = new function() {
+      let cn1;
+      let cn2;
+
+      const _cleanup = () => {
+        if( cn1 ) {
+          cn1.close();
+          cn1 = null;
+          timedLog('bc closed >');
+        }
+        if( cn2 ) {
+          cn2.close();
+          cn2 = null;
+          timedLog('bc closed <');
+        }
+      };
+
+      const _bounce = (cn, val = 0) => {
+        bcc.textContent = val;
+        return timeoutPromise(1000).then(() => {
+          try {
+            timedLog(`bc last: ${val}`);
+            cn.postMessage(Math.random() + val - 0.5);
+          } catch( e ) {
+            timedLog(`bc error ${e.toString()}`);
+          }
+        });
+      }
+
+      this.open = () => {
+        _cleanup();
+        timedLog('bc open');
+        cn1 = new BroadcastChannel('TestChannel');
+        cn2 = new BroadcastChannel('TestChannel');
+        cn1.onmessage = event =>  _bounce(cn2, event.data);
+        cn2.onmessage = event =>  _bounce(cn1, event.data);
+        _bounce(cn1);
+      };
+
+      this.close = _cleanup;
+
+      if( !window.BroadcastChannel ) {
+        timedLog('WARNING: BroadcastChannel not available!');
+        bcc.textContent = 'OFF';
+        this.open = this.close = () => {};
+      }
+    }();
+
+    // === WebSocket
+
+    const WS = new function() {
+      let socket;
+
+      const _cleanup = () => {
+        if( socket ) {
+          socket.close();
+          socket = null;
+          timedLog('ws close');
+        }
+        wss.textContent = 'OFF';
+      };
+
+      const _send = (sock) => {
+        if( !socket || socket !== sock )
+          return;
+        sock.send(`${Math.random()}`);
+      };
+      
+      this.open = () => {
+        _cleanup();
+        socket = new WebSocket('wss://echo.websocket.org');
+        timedLog('ws open');
+        socket.onopen = (event) => {
+          timedLog('ws connected');
+          _send(socket);
+        };
+        socket.onmessage = (event) => {
+          wss.textContent = `${event.data}`;
+          timedLog(`ws echo: ${event.data}`);
+          let _socket = socket;
+          timeoutPromise(1000).then(() => _send(_socket));
+        };
+        socket.onerror = (event) => {
+          timedLog(`ws error ${event}`);
+        };
+        socket.onclose = (event) => {
+          timedLog('ws disconnected');
+        };
+      };
+
+      this.close = _cleanup;
+
+      if( !window.WebSocket ) {
+        timedLog('WARNING: WebSocket not available!');
+        wss.textContent = 'OFF';
+        this.open = this.close = () => {};
+      }
+    }();
+
+    // === WebRTC
+
+    const WR = new function() {
+      const DEFAULT_FRAME_RATE = 30;
+      let canvas = document.getElementById('canvas');
+      let context = canvas.getContext('2d');
+      let remoteVideo = document.getElementById('remoteVideo');
+
+      let pc1;
+      let pc2;
+      let stream;
+      let active = null;
+
+      const _draw = () => {
+        if( !active ) {
+          active = null;
+          return;
+        }
+        window.requestAnimationFrame(_draw);
+        context.beginPath();
+        context.rect(0, 0, canvas.clientWidth, canvas.clientHeight);
+        let randomNumber = Math.random();
+        let hue;
+        if (randomNumber < 0.33) {
+          hue = 'red';
+        } else if (randomNumber < 0.66) {
+          hue = 'green';
+        } else {
+          hue = 'blue';
+        }
+        context.fillStyle = hue;
+        context.fill();
+      }
+
+      const _cleanup = () => {
+        if( pc1 ) {
+          pc1.close();
+          pc1 = null;
+          timedLog('rtc closed >');
+        }
+        if( pc2 ) {
+          pc2.close();
+          pc2 = null;
+          timedLog('rtc closed <');
+        }
+        if( stream ) {
+          stream.getTracks().forEach((track) => track.stop());
+          stream = null;
+        }
+        remoteVideo.srcObject = null;
+        if( active !== null ) {
+          active = false;
+          return false;
+        }
+        return true;
+      };
+
+      this.open = () => {
+        let inactive = _cleanup();
+        active = true;
+        if( inactive )
+            _draw();
+        stream = canvas.captureStream(DEFAULT_FRAME_RATE);
+        let servers = null;
+        pc1 = new RTCPeerConnection(servers);
+        pc1.onicecandidate = (event) => {
+          if (event.candidate) {
+            pc2.addIceCandidate(event.candidate);
+            timedLog(`rtc opened ${JSON.stringify(event.candidate.toJSON())}`);
+          }
+        };
+        pc2 = new RTCPeerConnection(servers);
+        pc2.onicecandidate = (event) => {
+          if (event.candidate) {
+            pc1.addIceCandidate(event.candidate);
+            timedLog(`rtc opened ${JSON.stringify(event.candidate.toJSON())}`);
+          }
+        };
+        if( pc1.addStream ) {
+          pc2.onaddstream = (event) => {
+            remoteVideo.srcObject = event.stream;
+            timedLog('rtc stream added');
+          };
+          pc1.addStream(stream);
+        } else {
+          let tracks = [];
+          pc2.ontrack = (event) => {
+            tracks.push(event.track)
+            timedLog('rtc track added');
+            remoteVideo.srcObject = new MediaStream(tracks);
+            timedLog('rtc stream added');
+          }
+          stream.getTracks().forEach(track => {
+            pc1.addTrack(track, stream);
+          });
+        }
+        pc1.createOffer({
+          offerToReceiveAudio: 1,
+          offerToReceiveVideo: 1
+        }).then(async (desc) => { 
+          timedLog(`rtc offer`);
+          await Promise.all([pc1.setLocalDescription(desc),pc2.setRemoteDescription(desc)]);
+          return pc2.createAnswer();
+        }).then(async (desc) => {
+          timedLog(`rtc answer`);
+          await Promise.all([pc2.setLocalDescription(desc),pc1.setRemoteDescription(desc)]);
+        }).then(() => {
+          timedLog('rtc running'); 
+        }).catch((error) => { 
+          timedLog(`rtc failed: ${error}`);
+        });
+      };
+
+      this.close = _cleanup;
+
+      if( !window.RTCPeerConnection ) {
+        timedLog('WARNING: WebRTC not available!');
+        rtc.textContent = 'OFF';
+        this.open = this.close = () => {};
+      }
+    }();
+
+    // === helper collection
+
+    const API = [ DB, BC, WS, WR ];
+
+    const openAPI = () => {
+      API.forEach((api) => api.open());
+    };
+
+    const closeAPI = () => {
+      API.forEach((api) => api.close());
+    };
+
+    // === resumeHandler
+
+    const resumeHandler = () => {
+      timedLog('resume event');
+      logStateChange(getState(), 'resume');
+      openAPI();
+      timedLog('resume event completed');
+    }
+
+    // === freezeHandler
+
+    const freezeHandler = async () => {
+      timedLog('freeze event');
+      logStateChange('frozen', 'freeze');
+      signalChange('off');
+      closeAPI();
+      timedLog('freeze event completed');
+      await timeoutPromise(500).then(() => timedLog('freeze timeout - NOT REACHED'));
+    }
+
+    // === pagehideHandler
+
+    const pagehideHandler = (event) => {
+      timedLog('pagehide event');
+      const nextState = event.persisted ? 'frozen' : 'terminated';
+      logStateChange(nextState, 'pagehide');
+      timedLog('pagehide event completed');
+    }
+
+    // === init
+
+    const customHandler = { 
+      resume: resumeHandler,
+      freeze: freezeHandler,
+      pagehide: pagehideHandler
+    };
+
+    signalInterval = setInterval(() => signalChange('on', ''), 1000);
+    API.forEach((api) => api.open());
+
+    ['pageshow', 'pagehide', 'focus', 'blur', 'resume', 'freeze', 'visibilitychange'].forEach((type) => {
+      window.addEventListener(type, customHandler[type] || (() => logStateChange(getState(), type)), { capture: true });
+    });
+  </script>
+
+</body>
+</html>
